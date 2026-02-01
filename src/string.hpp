@@ -427,8 +427,6 @@ private:
 
 	template <typename LHS, typename RHS> class concat
 	{
-		using blank_t = txt<codec<"ASCII">>;
-
 		const LHS lhs;
 		const RHS rhs;
 		
@@ -449,21 +447,6 @@ private:
 		constexpr operator str<Other, Arena>() const noexcept;
 
 		// operators
-
-		template <typename Other, typename Arena>
-		constexpr auto operator=(__OWNED__(rhs)) noexcept -> concat<blank_t, txt<Other>>;
-
-		template <typename Other /* can't own */>
-		constexpr auto operator=(__SLICE__(rhs)) noexcept -> concat<blank_t, txt<Other>>;
-
-		template <size_t                       N>
-		constexpr auto operator=(__08STR__(rhs)) noexcept -> concat<blank_t, txt<codec<"UTF-8">>>;
-
-		template <size_t                       N>
-		constexpr auto operator=(__16STR__(rhs)) noexcept -> concat<blank_t, txt<codec<"UTF-16">>>;
-
-		template <size_t                       N>
-		constexpr auto operator=(__32STR__(rhs)) noexcept -> concat<blank_t, txt<codec<"UTF-32">>>;
 
 		template <typename Other, typename Arena>
 		constexpr auto operator+(__OWNED__(rhs)) noexcept -> concat<concat, txt<Other>>;
@@ -503,6 +486,8 @@ private:
 		// stl compat; must be default constructible
 		constexpr  const_forward_iterator() noexcept = default;
 		constexpr ~const_forward_iterator() noexcept = default;
+
+		constexpr operator const T*() const noexcept;
 
 		constexpr auto operator*() const noexcept -> value_type;
 
@@ -544,6 +529,8 @@ private:
 		// stl compat; must be default constructible
 		constexpr  const_reverse_iterator() noexcept = default;
 		constexpr ~const_reverse_iterator() noexcept = default;
+
+		constexpr operator const T*() const noexcept;
 
 		constexpr auto operator*() const noexcept -> value_type;
 
@@ -962,6 +949,8 @@ private:
 		// stl compat; must be default constructible
 		constexpr  cursor() noexcept = default;
 		constexpr ~cursor() noexcept = default;
+
+		constexpr operator const T*() const noexcept;
 
 		constexpr auto operator*() const noexcept -> value_type;
 
@@ -2011,41 +2000,6 @@ template <typename   LHS, typename   RHS> constexpr auto API<Class>::concat<LHS,
 
 template <typename Class /* CRTP core */>
 template <typename   LHS, typename   RHS>
-template <typename Other, typename Arena> constexpr auto API<Class>::concat<LHS, RHS>::operator=(__OWNED__(rhs)) noexcept -> concat<blank_t, txt<Other>>
-{
-	return {{""}, {rhs}};
-}
-
-template <typename Class /* CRTP core */>
-template <typename   LHS, typename   RHS>
-template <typename Other /* can't own */> constexpr auto API<Class>::concat<LHS, RHS>::operator=(__SLICE__(rhs)) noexcept -> concat<blank_t, txt<Other>>
-{
-	return {{""}, {rhs}};
-}
-
-template <typename Class /* CRTP core */>
-template <typename   LHS, typename   RHS>
-template <size_t                       N> constexpr auto API<Class>::concat<LHS, RHS>::operator=(__08STR__(rhs)) noexcept -> concat<blank_t, txt<codec<"UTF-8">>>
-{
-	return {{""}, {rhs}};
-}
-
-template <typename Class /* CRTP core */>
-template <typename   LHS, typename   RHS>
-template <size_t                       N> constexpr auto API<Class>::concat<LHS, RHS>::operator=(__16STR__(rhs)) noexcept -> concat<blank_t, txt<codec<"UTF-16">>>
-{
-	return {{""}, {rhs}};
-}
-
-template <typename Class /* CRTP core */>
-template <typename   LHS, typename   RHS>
-template <size_t                       N> constexpr auto API<Class>::concat<LHS, RHS>::operator=(__32STR__(rhs)) noexcept -> concat<blank_t, txt<codec<"UTF-32">>>
-{
-	return {{""}, {rhs}};
-}
-
-template <typename Class /* CRTP core */>
-template <typename   LHS, typename   RHS>
 template <typename Other, typename Arena> constexpr auto API<Class>::concat<LHS, RHS>::operator+(__OWNED__(rhs)) noexcept -> concat<concat, txt<Other>>
 {
 	return {*this, {rhs}};
@@ -2081,6 +2035,11 @@ template <size_t                       N> constexpr auto API<Class>::concat<LHS,
 
 #pragma endregion CRTP::concat
 #pragma region CRTP::const_forward_iterator
+
+template <typename Class /* CRTP core */> constexpr API<Class>::const_forward_iterator::operator const T*() const noexcept
+{
+	return this->ptr;
+}
 
 template <typename Class /* CRTP core */> constexpr auto API<Class>::const_forward_iterator::operator*() const noexcept -> value_type
 {
@@ -2153,6 +2112,11 @@ template <typename Class /* CRTP core */> constexpr auto API<Class>::const_forwa
 
 #pragma endregion CRTP::const_forward_iterator
 #pragma region CRTP::const_reverse_iterator
+
+template <typename Class /* CRTP core */> constexpr API<Class>::const_reverse_iterator::operator const T*() const noexcept
+{
+	return this->ptr;
+}
 
 template <typename Class /* CRTP core */> constexpr auto API<Class>::const_reverse_iterator::operator*() const noexcept -> value_type
 {
@@ -3616,22 +3580,53 @@ template <typename Codec, typename Alloc> constexpr auto str<Codec, Alloc>::__in
 #pragma endregion str
 #pragma region str::cursor
 
-template <typename Codec, typename Alloc> template <typename Iterator> constexpr auto str<Codec, Alloc>::cursor<Iterator>::operator*() const noexcept -> value_type
+template <typename Codec, typename Alloc> template <typename Iterator> constexpr str<Codec, Alloc>::cursor<Iterator>::operator const T*() const noexcept
 {
+	T* ptr {this->common->ptr};
+
+	// apply offset
 	switch (this->offset_tag)
 	{
 		case it_offset_relative_tag::HEAD:
 		{
-			return {this->common, this->common->ptr + this->offset, this->offset_tag, this->cursor_tag};
+			ptr += this->offset;
+			break;
 		}
 		case it_offset_relative_tag::TAIL:
 		{
-			return {this->common, this->common->ptr - this->offset, this->offset_tag, this->cursor_tag};
+			ptr -= this->offset;
+			break;
 		}
 	}
 
-	assert(!"segfault");
-	std::unreachable();
+	return static_cast<const T*>(ptr);
+}
+
+template <typename Codec, typename Alloc> template <typename Iterator> constexpr auto str<Codec, Alloc>::cursor<Iterator>::operator*() const noexcept -> value_type
+{
+	T* ptr {this->common->ptr};
+
+	// apply offset
+	switch (this->offset_tag)
+	{
+		case it_offset_relative_tag::HEAD:
+		{
+			ptr += this->offset;
+			break;
+		}
+		case it_offset_relative_tag::TAIL:
+		{
+			ptr -= this->offset;
+			break;
+		}
+	}
+
+	return // construct
+	{
+		this->common,ptr,
+		this->offset_tag,
+		this->cursor_tag
+	};
 }
 
 template <typename Codec, typename Alloc> template <typename Iterator> constexpr auto str<Codec, Alloc>::cursor<Iterator>::operator++(   ) noexcept -> Iterator&
