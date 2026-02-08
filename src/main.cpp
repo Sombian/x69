@@ -15,7 +15,7 @@ int main() noexcept
 	std::system("chcp 65001 > NUL");
 	#endif//MSC_VER//############//;
 
-	utf::str str {u8"티라미수☆치즈케잌☆말차라떼"};
+	utf::str str {u8"ABCDEFGHIJKLMNOPQRSTUVW"};
 
 	for (auto code : str | std::views::reverse)
 	{

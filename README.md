@@ -152,7 +152,6 @@ const auto txt {str.substr(0, N - 69)};
 
 `str` supports self-healing iterators, which allows in-place code point mutation, during traversal.  
 **note**: self-healing has its limits. any mutation that isnt done by *current* proxy will result in **UB**.  
-*to be more precise, mutation that doesn't alter past code point is safe, whether that be via proxy or not*  
 
 ### ✔️ safe mutation
 
