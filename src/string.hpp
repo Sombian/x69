@@ -840,7 +840,7 @@ private:
 	{
 		using self_t = str;
 
-		// std::views::reverse is impl in Clang/GCC/MSVC:
+		// std::views::reverse impl in Clang/GCC/MSVC:
 		//
 		// ┌─────────────────────────────────────────────────────┐
 		// │ template <typename iterator> class reverse_iterator │
