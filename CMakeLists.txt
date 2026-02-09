@@ -21,29 +21,28 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	add_compile_options(/Wall /permissive- /fsanitize=address /utf-8)
 endif()
 
-# main entry point...
-add_executable(${PROJECT_NAME}
-	src/main.cpp
-)
+# set main entry point
+add_executable(${PROJECT_NAME} src/main.cpp)
 
 # scan pkg/<module>/<header>
-file(GLOB_RECURSE DEPENDENCIES_DIR
-	CONFIGURE_DEPENDS
-	LIST_DIRECTORIES true
-	"${CMAKE_SOURCE_DIR}/pkg/**/*.h*"
+file(GLOB_RECURSE DEPENDENCIES_DIR LIST_DIRECTORIES
+                                   true
+                                   CONFIGURE_DEPENDS
+	#───────────────────────────────────────────────#
+	  "${CMAKE_SOURCE_DIR}/pkg/**/*.{h,hh,hpp,hxx}" #
+	# "${CMAKE_SOURCE_DIR}/pkg/**/*.{c,cc,cpp,cxx}" #
+	#───────────────────────────────────────────────#
 )
 list(REMOVE_DUPLICATES DEPENDENCIES_DIR)
 
-# auto-resolve pkg/<module>/
-target_include_directories(${PROJECT_NAME}
-	PRIVATE ${CMAKE_SOURCE_DIR}/src
-	PRIVATE ${DEPENDENCIES_DIR}
-)
-
-# IDE specific flags (VS & VSCode)
+# IDE specific (Visual Studio)
 set_target_properties(${PROJECT_NAME} PROPERTIES
-	VS_GLOBAL_RunCodeAnalysis true
+	VS_GLOBAL_RunCodeAnalysis             true
 	VS_GLOBAL_EnableMicrosoftCodeAnalysis true
 	VS_GLOBAL_EnableClangTidyCodeAnalysis true
 	DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
+
+# resolve pkg/<module>/<header>
+target_include_directories(${PROJECT_NAME} PRIVATE ${DEPENDENCIES_DIR}
+                                           PRIVATE ${CMAKE_SOURCE_DIR}/src)

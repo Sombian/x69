@@ -24,7 +24,7 @@ inline auto operator<<(std::ostream& os, char32_t code) noexcept -> decltype(os)
 {
 	char out[4]; short unit {0};
 
-	if (code <= 0x00007F)
+	/**/ if (code <= 0x00007F)
 	{
 		out[unit++] = static_cast<char>(code /* safe to truncate */);
 	}
@@ -74,17 +74,17 @@ namespace utf
 #define __16STR__(name) const char16_t (&name)[N]
 #define __32STR__(name) const char32_t (&name)[N]
 
-template <size_t N> struct format_t { /**/ char _[N];
-constexpr format_t(const char (&str)[N]) noexcept
-{ std::ranges::copy(/**/ str /**/, this->_); }
+template <size_t N> struct format_t { char _[N];
 [[nodiscard("?")]] constexpr auto operator==(const
-format_t&) const noexcept -> bool = default; /**/
+format_t& rhs) const noexcept -> bool = default;
 [[nodiscard("?")]] constexpr auto operator!=(const
-format_t&) const noexcept -> bool = default; /**/
+format_t& rhs) const noexcept -> bool = default;
 template <size_t U> constexpr auto operator==(const
 format_t<U>&) const noexcept -> bool { return 0; };
 template <size_t U> constexpr auto operator!=(const
-format_t<U>&) const noexcept -> bool { return 1; }; };
+format_t<U>&) const noexcept -> bool { return 1; };
+constexpr format_t(const char (&str)[N]) noexcept
+{ std::ranges::copy(/**/ str /**/, this->_); } };
 
 
 enum class range : uint8_t {N};
@@ -112,7 +112,7 @@ template <> struct codec<"ASCII">
 	constexpr  codec() noexcept = delete;
 	constexpr ~codec() noexcept = delete;
 
-	static constexpr auto size(const char32_t code) noexcept -> int8_t;
+	static constexpr auto size(/**/ char32_t code) noexcept -> int8_t;
 	static constexpr auto next(const unit_t* data) noexcept -> int8_t;
 	static constexpr auto back(const unit_t* data) noexcept -> int8_t;
 
@@ -134,7 +134,7 @@ template <> struct codec<"UTF-8">
 	constexpr  codec() noexcept = delete;
 	constexpr ~codec() noexcept = delete;
 
-	static constexpr auto size(const char32_t code) noexcept -> int8_t;
+	static constexpr auto size(/**/ char32_t code) noexcept -> int8_t;
 	static constexpr auto next(const unit_t* data) noexcept -> int8_t;
 	static constexpr auto back(const unit_t* data) noexcept -> int8_t;
 
@@ -156,7 +156,7 @@ template <> struct codec<"UTF-16">
 	constexpr  codec() noexcept = delete;
 	constexpr ~codec() noexcept = delete;
 
-	static constexpr auto size(const char32_t code) noexcept -> int8_t;
+	static constexpr auto size(/**/ char32_t code) noexcept -> int8_t;
 	static constexpr auto next(const unit_t* data) noexcept -> int8_t;
 	static constexpr auto back(const unit_t* data) noexcept -> int8_t;
 
@@ -178,7 +178,7 @@ template <> struct codec<"UTF-32">
 	constexpr  codec() noexcept = delete;
 	constexpr ~codec() noexcept = delete;
 
-	static constexpr auto size(const char32_t code) noexcept -> int8_t;
+	static constexpr auto size(/**/ char32_t code) noexcept -> int8_t;
 	static constexpr auto next(const unit_t* data) noexcept -> int8_t;
 	static constexpr auto back(const unit_t* data) noexcept -> int8_t;
 
@@ -607,7 +607,7 @@ template <format_t local, typename alloc> class str : public API<str<local,alloc
 			uint8_t bytes
 			[sizeof(buffer) / sizeof(uint8_t)];
 		}
-		__union__ { .small {0} };
+		__union__;
 
 		constexpr  storage() noexcept;
 		constexpr ~storage() noexcept;
@@ -1202,7 +1202,7 @@ template <format_t alien /* can't own */> inline auto operator<<(std::ostream& o
 #pragma endregion iostream
 #pragma region codec<"ASCII">
 
-constexpr auto codec<"ASCII">::size([[maybe_unused]] const char32_t code) noexcept -> int8_t
+constexpr auto codec<"ASCII">::size([[maybe_unused]] /**/ char32_t code) noexcept -> int8_t
 {
 	return 1;
 }
@@ -1260,7 +1260,7 @@ constexpr auto codec<"ASCII">::decode(const unit_t* in, char32_t& out, int8_t st
 #pragma endregion codec<"ASCII">
 #pragma region codec<"UTF-8">
 
-constexpr auto codec<"UTF-8">::size([[maybe_unused]] const char32_t code) noexcept -> int8_t
+constexpr auto codec<"UTF-8">::size([[maybe_unused]] /**/ char32_t code) noexcept -> int8_t
 {
 	const size_t N (std::bit_width
 	(static_cast<uint32_t>(code)));
@@ -1447,7 +1447,7 @@ constexpr auto codec<"UTF-8">::decode(const unit_t* in, char32_t& out, int8_t st
 #pragma endregion codec<"UTF-8">
 #pragma region codec<"UTF-16">
 
-constexpr auto codec<"UTF-16">::size([[maybe_unused]] const char32_t code) noexcept -> int8_t
+constexpr auto codec<"UTF-16">::size([[maybe_unused]] /**/ char32_t code) noexcept -> int8_t
 {
 	//┌───────────────────────┐
 	//│ U+000000 ... U+00D7FF │ -> 1 code unit
@@ -1597,7 +1597,7 @@ constexpr auto codec<"UTF-16">::decode(const unit_t* in, char32_t& out, int8_t s
 #pragma endregion codec<"UTF-16">
 #pragma region codec<"UTF-32">
 
-constexpr auto codec<"UTF-32">::size([[maybe_unused]] const char32_t code) noexcept -> int8_t
+constexpr auto codec<"UTF-32">::size([[maybe_unused]] /**/ char32_t code) noexcept -> int8_t
 {
 	return 1;
 }
@@ -2961,8 +2961,10 @@ template <format_t local, typename alloc> constexpr str<local, alloc>::buffer::o
 
 template <format_t local, typename alloc> constexpr str<local, alloc>::storage::storage() noexcept
 {
-	   this->__union__.bytes[RMB] = MAX << SFT;
-	// std::construct_at(&this->__union__.large);
+	static constexpr const auto INIT {MAX << SFT};
+
+	this->__union__.small[0x0] = '\0'; // c-str
+	this->__union__.bytes[RMB] = INIT; // SSO23
 }
 
 template <format_t local, typename alloc> constexpr str<local, alloc>::storage::~storage() noexcept
@@ -4025,64 +4027,61 @@ auto fileof(const STRING& path) noexcept -> std::optional
 		UTF32_LE = (5 << 4) | 4,
 	};
 
-	static const auto byte_order_mask
+	static const auto byte_order_mask {[](std::ifstream& ifs) noexcept -> encoding
 	{
-		[](std::ifstream& ifs) noexcept -> encoding
-		{
-			char buffer[4];
+		char buffer[4];
 
-			ifs.seekg(0, std::ios::beg); // move to the beginning of the file #A
-			ifs.read(&buffer[0], 4); const auto bytes {ifs.gcount()}; ifs.clear();
-			ifs.seekg(0, std::ios::beg); // move to the beginning of the file #B
+		ifs.seekg(0, std::ios::beg); // move to the beginning of the file #A
+		ifs.read(&buffer[0], 4); const auto bytes {ifs.gcount()}; ifs.clear();
+		ifs.seekg(0, std::ios::beg); // move to the beginning of the file #B
 
-			// 00 00 FE FF
-			if (4 <= bytes
-			    &&
-			    buffer[0] == '\x00'
-			    &&
-			    buffer[1] == '\x00'
-			    &&
-			    buffer[2] == '\xFE'
-			    &&
-			    buffer[3] == '\xFF') [[unlikely]] return UTF32_BE;
+		// 00 00 FE FF
+		if (4 <= bytes
+		    &&
+		    buffer[0] == '\x00'
+		    &&
+		    buffer[1] == '\x00'
+		    &&
+		    buffer[2] == '\xFE'
+		    &&
+		    buffer[3] == '\xFF') [[unlikely]] return UTF32_BE;
 
-			// FF FE 00 00
-			if (4 <= bytes
-			    &&
-			    buffer[0] == '\xFF'
-			    &&
-			    buffer[1] == '\xFE'
-			    &&
-			    buffer[2] == '\x00'
-			    &&
-			    buffer[3] == '\x00') [[unlikely]] return UTF32_LE;
+		// FF FE 00 00
+		if (4 <= bytes
+		    &&
+		    buffer[0] == '\xFF'
+		    &&
+		    buffer[1] == '\xFE'
+		    &&
+		    buffer[2] == '\x00'
+		    &&
+		    buffer[3] == '\x00') [[unlikely]] return UTF32_LE;
 
-			// FE FF
-			if (2 <= bytes
-			    &&
-			    buffer[0] == '\xFE'
-			    &&
-			    buffer[1] == '\xFF') [[unlikely]] return UTF16_BE;
+		// FE FF
+		if (2 <= bytes
+		    &&
+		    buffer[0] == '\xFE'
+		    &&
+		    buffer[1] == '\xFF') [[unlikely]] return UTF16_BE;
 
-			// FF FE
-			if (2 <= bytes
-			    &&
-			    buffer[0] == '\xFF'
-			    &&
-			    buffer[1] == '\xFE') [[unlikely]] return UTF16_LE;
+		// FF FE
+		if (2 <= bytes
+		    &&
+		    buffer[0] == '\xFF'
+		    &&
+		    buffer[1] == '\xFE') [[unlikely]] return UTF16_LE;
 
-			// EF BB BF
-			if (3 <= bytes
-			    &&
-			    buffer[0] == '\xEF'
-			    &&
-			    buffer[1] == '\xBB'
-			    &&
-			    buffer[2] == '\xBF') [[unlikely]] return UTF8_BOM;
+		// EF BB BF
+		if (3 <= bytes
+		    &&
+		    buffer[0] == '\xEF'
+		    &&
+		    buffer[1] == '\xBB'
+		    &&
+		    buffer[2] == '\xBF') [[unlikely]] return UTF8_BOM;
 
-			return UTF8_STD;
-		}
-	};
+		return UTF8_STD;
+	}};
 
 	static const auto write_as_native {[]<format_t local, typename alloc>(std::ifstream& ifs, str<local, alloc>& str) noexcept -> void
 	{
@@ -4134,32 +4133,30 @@ auto fileof(const STRING& path) noexcept -> std::optional
 		str.__size__(dest - head);
 	}};
 
-	const std::filesystem::path fs
+	const std::filesystem::path fs {[&]() noexcept -> decltype(fs)
 	{
-		[&]() -> std::filesystem::path
-		{
-			using file_t = decltype(fs);
-			using string = std::string;
+		using file_t = decltype(fs);
+		using string = std::string;
 
-			// constructible on the fly
-			if constexpr (std::is_constructible_v<file_t, STRING>)
-			{
-				return path;
-			}
-			// at least convertible to file_t!
-			else if constexpr (std::is_convertible_v<STRING, file_t>)
-			{
-				return static_cast<file_t>(path);
-			}
-			// at least convertible to string!
-			else if constexpr (std::is_convertible_v<STRING, string>)
-			{
-				return static_cast<string>(path);
-			}
-			// ...constexpr failuare! DEAD-END!
-			else static_assert(!"ERROR! call to 'fileof' is ambigious");
-		}()
-	};
+		// constructible on the fly
+		if constexpr (std::is_constructible_v<file_t, STRING>)
+		{
+			return path;
+		}
+		// at least convertible to file_t!
+		else if constexpr (std::is_convertible_v<STRING, file_t>)
+		{
+			return static_cast<file_t>(path);
+		}
+		// at least convertible to string!
+		else if constexpr (std::is_convertible_v<STRING, string>)
+		{
+			return static_cast<string>(path);
+		}
+		// ...constexpr failuare! DEAD-END!
+		else static_assert(!"ERROR! call to 'fileof' is ambigious");
+	}
+	()};
 
 	if (std::ifstream ifs {fs, std::ios::binary})
 	{
@@ -4183,8 +4180,7 @@ auto fileof(const STRING& path) noexcept -> std::optional
 
 				str.capacity(max / sizeof(typename decltype(str)::unit_t));
 
-				if constexpr (std::endian::native == std::endian::little) write_as_native(ifs, str);
-				                                                     else write_as_native(ifs, str);
+				/* UTF-8 is endian insensitive */ write_as_native(ifs, str);
 
 				return str;
 			}
@@ -4194,8 +4190,7 @@ auto fileof(const STRING& path) noexcept -> std::optional
 
 				str.capacity(max / sizeof(typename decltype(str)::unit_t));
 
-				if constexpr (std::endian::native == std::endian::big) write_as_native(ifs, str);
-				                                                  else write_as_native(ifs, str);
+				/* UTF-8 is endian insensitive */ write_as_native(ifs, str);
 
 				return str;
 			}
