@@ -667,19 +667,11 @@ template <format_t local, typename alloc> class str : public API<str<local,alloc
 public:
 
 	// optional; returns the content of a file with CRLF/CR to LF normalization.
-	template <typename STRING> friend auto fileof(const STRING& path) noexcept
-	->
-	std::optional
-	<
-		std::variant
-		<
-			str<"UTF-8">
-			,
-			str<"UTF-16">
-			,
-			str<"UTF-32">
-		>
-	>;
+	template <typename STRING> friend auto fileof(const STRING& path) noexcept -> std::optional<std::variant<str<"UTF-8">
+	                                                                                                         ,
+	                                                                                                         str<"UTF-16">
+	                                                                                                         ,
+	                                                                                                         str<"UTF-32">>>;
 
 	[[deprecated]] constexpr operator const unit_t*() const noexcept;
 	[[deprecated]] constexpr operator /*&*/ unit_t*() /*&*/ noexcept;
@@ -2961,10 +2953,10 @@ template <format_t local, typename alloc> constexpr str<local, alloc>::buffer::o
 
 template <format_t local, typename alloc> constexpr str<local, alloc>::storage::storage() noexcept
 {
-	static constexpr const auto INIT {MAX << SFT};
+	static constexpr const auto init {MAX << SFT};
 
 	this->__union__.small[0x0] = '\0'; // c-str
-	this->__union__.bytes[RMB] = INIT; // SSO23
+	this->__union__.bytes[RMB] = init; // SSO23
 }
 
 template <format_t local, typename alloc> constexpr str<local, alloc>::storage::~storage() noexcept
@@ -4003,19 +3995,11 @@ template <format_t local /* can't own */> constexpr auto txt<local>::writer::ope
 #pragma endregion txt::writer
 #pragma region filesystem
 
-template <typename STRING>
-// fs I/O at your service
-auto fileof(const STRING& path) noexcept -> std::optional
-                                            <
-                                            	std::variant
-                                            	<
-                                            		str<"UTF-8">
-                                            		,
-                                            		str<"UTF-16">
-                                            		,
-                                            		str<"UTF-32">
-                                            	>
-                                            >
+template <typename STRING> auto fileof(const STRING& path) noexcept -> std::optional<std::variant<str<"UTF-8">
+                                                                                                  ,
+                                                                                                  str<"UTF-16">
+                                                                                                  ,
+                                                                                                  str<"UTF-32">>>
 {
 	enum encoding : uint8_t
 	{

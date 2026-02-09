@@ -19,6 +19,8 @@ int main() noexcept
 }
 ```
 
+special thanks to facebook's brilliant `FBString` design **:D**  
+
 ## overview
 
 | class | owns? | null-term? | use-after-free? |
@@ -160,8 +162,8 @@ utf::utf8 str {u8"마법소녀 마도카☆마기카"};
 
 for (auto code : str)
 {
-	code = U'♥'; // ❌ buffer shift
-	code = U'?'; // ✔️ buffer shift
+	code = U'♥'; // buffer shift: F
+	code = U'?'; // buffer shift: T
 }
 ```
 
@@ -174,15 +176,15 @@ for (auto code : str)
 {
 	// technically safe
 	str = u8"마법소녀 마도카☆마기카";
-	// canonically unsafe
+	// inherently unsafe
 	str = u8"기적도, 마법도, 있어..!";
 
 	if (...)
 	{
 		// technically safe
-		*this->begin() = U'♥'; // ❌ buffer shift
-		// canonically unsafe
-		*this->begin() = U'?'; // ✔️ buffer shift
+		*this->begin() = U'♥'; // buffer shift: F
+		// inherently unsafe
+		*this->begin() = U'?'; // buffer shift: T
 	}
 }
 ```
