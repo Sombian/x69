@@ -15,7 +15,7 @@ int main() noexcept
 	std::system("chcp 65001 > NUL");
 	#endif//MSC_VER//############//;
 
-	utf::str str {u8"ABCDEFGHIJKLMNOPQRSTUVW"};
+	x69::str str {u8"ABCDEFGHIJKLMNOPQRSTUVW"};
 
 	for (auto code : str | std::views::reverse)
 	{
@@ -33,8 +33,8 @@ TEST_CASE("string")
 {
 	SUBCASE("SSO23")
 	{
-		utf::str small {u8"ABCDEFGHIJKLMNOPQRSTUVW"};
-		utf::str large {u8"ÁBCDEFGHIJKLMNOPQRSTUVW"};
+		x69::str small {u8"ABCDEFGHIJKLMNOPQRSTUVW"};
+		x69::str large {u8"ÁBCDEFGHIJKLMNOPQRSTUVW"};
 
 		CHECK(small.size() == small.capacity());
 		CHECK(large.size() == large.capacity());
@@ -42,9 +42,9 @@ TEST_CASE("string")
 
 	SUBCASE("index")
 	{
-		utf::utf8 str {u8"티라미수"};
+		x69::str8 str {u8"티라미수"};
 
-		using utf::range::N;
+		using x69::range::N;
 
 		CHECK(str[0] == U'티');
 		CHECK(str[1] == U'라');
@@ -57,8 +57,8 @@ TEST_CASE("string")
 
 	SUBCASE("concat")
 	{
-		utf::utf8 티라 {u8"티라"};
-		utf::utf8 미수 {u8"미수"};
+		x69::str8 티라 {u8"티라"};
+		x69::str8 미수 {u8"미수"};
 
 		CHECK(티라.starts_with(티라));
 		CHECK(티라.ends_with(u"티라"));
@@ -66,8 +66,8 @@ TEST_CASE("string")
 		CHECK(미수.starts_with(미수));
 		CHECK(미수.ends_with(u"미수"));
 
-		utf::utf8 티라미수 {u"티라" + 미수};
-		utf::utf8 티라티라 {티라 + u"티라"};
+		x69::str8 티라미수 {u"티라" + 미수};
+		x69::str8 티라티라 {티라 + u"티라"};
 
 		CHECK(티라미수 == u8"티라미수");
 		CHECK(티라미수.length() == 4);
@@ -78,7 +78,7 @@ TEST_CASE("string")
 
 	SUBCASE("split")
 	{
-		utf::utf8 str {u8"티라미수"
+		x69::str8 str {u8"티라미수"
 		               u8"☆"
 		               u8"치즈케잌"
 		               u8"☆"
@@ -100,7 +100,7 @@ TEST_CASE("string")
 
 	SUBCASE("range")
 	{
-		utf::utf8 src {u8"티라미수"
+		x69::str8 src {u8"티라미수"
 		               u8"☆"
 		               u8"치즈케잌"
 		               u8"☆"
@@ -110,7 +110,7 @@ TEST_CASE("string")
 		std::vector<char32_t> bar;
 
 		{
-			/*&*/ utf::str str {src};
+			/*&*/ x69::str str {src};
 
 			for (auto code : str | std::views::reverse)
 			{
@@ -118,7 +118,7 @@ TEST_CASE("string")
 			}
 		}
 		{
-			const utf::str str {src};
+			const x69::str str {src};
 
 			for (auto code : str | std::views::reverse)
 			{
@@ -135,29 +135,29 @@ TEST_CASE("fileof")
 {
 	SUBCASE("UTF-8")
 	{
-		const auto file {utf::fileof("./tests/utf8.txt")};
+		const auto file {x69::fileof("./tests/utf8.txt")};
 
 		REQUIRE(file.has_value());
 
-		CHECK(std::holds_alternative<utf::utf8>(file.value()));
+		CHECK(std::holds_alternative<x69::str8>(file.value()));
 	}
 
 	SUBCASE("UTF-16-LE")
 	{
-		const auto file {utf::fileof("./tests/utf16le.txt")};
+		const auto file {x69::fileof("./tests/utf16le.txt")};
 
 		REQUIRE(file.has_value());
 
-		CHECK(std::holds_alternative<utf::utf16>(file.value()));
+		CHECK(std::holds_alternative<x69::str16>(file.value()));
 	}
 
 	SUBCASE("UTF-16-BE")
 	{
-		const auto file {utf::fileof("./tests/utf16be.txt")};
+		const auto file {x69::fileof("./tests/utf16be.txt")};
 
 		REQUIRE(file.has_value());
 
-		CHECK(std::holds_alternative<utf::utf16>(file.value()));
+		CHECK(std::holds_alternative<x69::str16>(file.value()));
 	}
 }
 

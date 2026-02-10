@@ -49,7 +49,7 @@ inline auto operator<<(std::ostream& os, char32_t code) noexcept -> decltype(os)
 	return os.write(out, unit);
 }
 
-namespace utf
+namespace x69
 {
 
 #define COPY_CONSTRUCTOR($T) constexpr $T(const $T&  other) noexcept
@@ -4236,9 +4236,9 @@ template <typename STRING> auto fileof(const STRING& path) noexcept -> std::opti
 #undef __16STR__
 #undef __32STR__
 
-using utf8 = str<"UTF-8">;
-using utf16 = str<"UTF-16">;
-using utf32 = str<"UTF-32">;
+using str8 = str<"UTF-8">;
+using str16 = str<"UTF-16">;
+using str32 = str<"UTF-32">;
 
 using txt8 = txt<"UTF-8">;
 using txt16 = txt<"UTF-16">;
@@ -4259,9 +4259,9 @@ template <size_t N> txt(const char16_t (&_)[N]) -> txt<"UTF-16">;
 template <size_t N> txt(const char32_t (&_)[N]) -> txt<"UTF-32">;
 }
 
-template <utf::format_t local, typename alloc> struct std::hash<utf::str<local, alloc>>
+template <x69::format_t local, typename alloc> struct std::hash<x69::str<local, alloc>>
 {
-	constexpr auto operator()(const utf::str<local, alloc>& str) const noexcept -> size_t
+	constexpr auto operator()(const x69::str<local, alloc>& str) const noexcept -> size_t
 	{
 		uint32_t seed {0};
 
@@ -4273,9 +4273,9 @@ template <utf::format_t local, typename alloc> struct std::hash<utf::str<local, 
 	}
 };
 
-template <utf::format_t local /* can't own */> struct std::hash<utf::txt<local /*##*/>>
+template <x69::format_t local /* can't own */> struct std::hash<x69::txt<local /*##*/>>
 {
-	constexpr auto operator()(const utf::txt<local /*##*/>& str) const noexcept -> size_t
+	constexpr auto operator()(const x69::txt<local /*##*/>& str) const noexcept -> size_t
 	{
 		uint32_t seed {0};
 
@@ -4287,8 +4287,8 @@ template <utf::format_t local /* can't own */> struct std::hash<utf::txt<local /
 	}
 };
 
-template <utf::format_t local, typename alloc>
-inline constexpr bool std::ranges::disable_sized_range<utf::str<local, alloc>> = true;
+template <x69::format_t local, typename alloc>
+inline constexpr bool std::ranges::disable_sized_range<x69::str<local, alloc>> = true;
 
-template <utf::format_t local /* can't own */>
-inline constexpr bool std::ranges::disable_sized_range<utf::txt<local /*##*/>> = true;
+template <x69::format_t local /* can't own */>
+inline constexpr bool std::ranges::disable_sized_range<x69::txt<local /*##*/>> = true;
