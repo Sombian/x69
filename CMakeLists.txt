@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(main LANGUAGES C CXX)
+project(x69 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -21,8 +21,28 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	add_compile_options(/Wall /permissive- /fsanitize=address /utf-8)
 endif()
 
-# set main entry point
-add_executable(${PROJECT_NAME} src/main.cpp)
+# setup module
+set(CMAKE_CURRENT_PROJECTDIR
+  # sets project folder to "./src"
+  ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+add_library(x69_string INTERFACE)
+
+target_compile_features(x69_string
+	PUBLIC INTERFACE
+		# enforce project's standard
+		cxx_std_${CMAKE_CXX_STANDARD}
+)
+
+target_include_directories(x69_string
+	SYSTEM INTERFACE
+		$<BUILD_INTERFACE:${CMAKE_CURRENT_PROJECTDIR}>
+		$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+
+# setup script
+add_executable(tests tests/main.cpp)
+add_executable(tools tools/main.cpp)
 
 # scan pkg/<module>/<header>
 file(GLOB_RECURSE DEPENDENCIES_DIR LIST_DIRECTORIES
@@ -35,8 +55,8 @@ file(GLOB_RECURSE DEPENDENCIES_DIR LIST_DIRECTORIES
 )
 list(REMOVE_DUPLICATES DEPENDENCIES_DIR)
 
-# IDE specific (Visual Studio)
-set_target_properties(${PROJECT_NAME} PROPERTIES
+# IDE specifics (Visual Studio)
+set_target_properties(tests tools PROPERTIES
 	VS_GLOBAL_RunCodeAnalysis             true
 	VS_GLOBAL_EnableMicrosoftCodeAnalysis true
 	VS_GLOBAL_EnableClangTidyCodeAnalysis true
@@ -44,5 +64,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 # resolve pkg/<module>/<header>
-target_include_directories(${PROJECT_NAME} PRIVATE ${DEPENDENCIES_DIR}
-                                           PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(tests PRIVATE x69_string)
+target_include_directories(tests PRIVATE ${DEPENDENCIES_DIR})
+
+target_link_libraries(tools PRIVATE x69_string)
+target_include_directories(tools PRIVATE ${DEPENDENCIES_DIR})

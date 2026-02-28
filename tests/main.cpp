@@ -1,10 +1,10 @@
 #include <ranges>
 #include <vector>
 #include <variant>
+#include <utility>
 #include <iostream>
-#include <algorithm>
 
-#include "string.hpp"
+#include "x69/string.hpp"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #ifndef DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
@@ -15,7 +15,7 @@ int main() noexcept
 	std::system("chcp 65001 > NUL");
 	#endif//MSC_VER//############//;
 
-	x69::str str {u8"ABCDEFGHIJKLMNOPQRSTUVW"};
+	x69::str8 str {u8"ABCDEFGHIJKLMNOPQRSTUVW"};
 
 	for (auto code : str | std::views::reverse)
 	{
@@ -33,8 +33,8 @@ TEST_CASE("string")
 {
 	SUBCASE("SSO23")
 	{
-		x69::str small {u8"ABCDEFGHIJKLMNOPQRSTUVW"};
-		x69::str large {u8"ÁBCDEFGHIJKLMNOPQRSTUVW"};
+		x69::str8 small {u8"ABCDEFGHIJKLMNOPQRSTUVW"};
+		x69::str8 large {u8"ÁBCDEFGHIJKLMNOPQRSTUVW"};
 
 		CHECK(small.size() == small.capacity());
 		CHECK(large.size() == large.capacity());
@@ -66,14 +66,14 @@ TEST_CASE("string")
 		CHECK(미수.starts_with(미수));
 		CHECK(미수.ends_with(u"미수"));
 
-		x69::str8 티라미수 {u"티라" + 미수};
-		x69::str8 티라티라 {티라 + u"티라"};
+		x69::str8 X미수 {u"?" + 미수};
+		x69::str8 티라X {티라 + '?'};
 
-		CHECK(티라미수 == u8"티라미수");
-		CHECK(티라미수.length() == 4);
+		CHECK(X미수 == u"?미수");
+		CHECK(X미수.length() == 3);
 
-		CHECK(티라티라 == u8"티라티라");
-		CHECK(티라티라.length() == 4);
+		CHECK(티라X == u"티라?");
+		CHECK(티라X.length() == 3);
 	}
 
 	SUBCASE("split")
@@ -84,7 +84,7 @@ TEST_CASE("string")
 		               u8"☆"
 		               u8"말차라떼"};
 
-		auto split {str.split(u"☆")};
+		auto split {str.split(U"☆")};
 
 		CHECK(split[0] == u"티라미수");
 		CHECK(split[1] == u"치즈케잌");
@@ -106,24 +106,16 @@ TEST_CASE("string")
 		               u8"☆"
 		               u8"말차라떼"};
 
-		std::vector<char32_t> foo;
-		std::vector<char32_t> bar;
+		std::vector<x69::code_t> foo;
+		std::vector<x69::code_t> bar;
 
+		if (/*&*/ x69::str str {src}; 0 < str.size())
 		{
-			/*&*/ x69::str str {src};
-
-			for (auto code : str | std::views::reverse)
-			{
-				foo.push_back(static_cast<char32_t>(code));
-			}
+			for (auto code : str) foo.push_back(code);
 		}
+		if (const x69::str str {src}; 0 < str.size())
 		{
-			const x69::str str {src};
-
-			for (auto code : str | std::views::reverse)
-			{
-				bar.push_back(static_cast<char32_t>(code));
-			}
+			for (auto code : str) bar.push_back(code);
 		}
 
 		CHECK(std::ranges::equal(foo.begin(), foo.end(),
@@ -135,7 +127,7 @@ TEST_CASE("fileof")
 {
 	SUBCASE("UTF-8")
 	{
-		const auto file {x69::fileof("./tests/utf8.txt")};
+		const auto file {x69::fileof("./tests/data/utf8.txt")};
 
 		REQUIRE(file.has_value());
 
@@ -144,7 +136,7 @@ TEST_CASE("fileof")
 
 	SUBCASE("UTF-16-LE")
 	{
-		const auto file {x69::fileof("./tests/utf16le.txt")};
+		const auto file {x69::fileof("./tests/data/utf16le.txt")};
 
 		REQUIRE(file.has_value());
 
@@ -153,7 +145,7 @@ TEST_CASE("fileof")
 
 	SUBCASE("UTF-16-BE")
 	{
-		const auto file {x69::fileof("./tests/utf16be.txt")};
+		const auto file {x69::fileof("./tests/data/utf16be.txt")};
 
 		REQUIRE(file.has_value());
 
