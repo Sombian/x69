@@ -180,6 +180,96 @@ namespace x69
 
 	template <format_t native,
 	          typename derive>
+	constexpr auto cable<native, derive>::stoi(uint8_t radix) const noexcept -> size_t
+	{
+		assert(2 <= radix && radix <= 36);
+
+		size_t value {0};
+
+		constexpr static const auto table {[]
+		{
+			std::array<uint8_t, 256> impl {255};
+
+			for (uint8_t i {'0'}; i <= '9'; ++i)
+			{
+				impl[i] = i - '0' + 0x0;
+			}
+			for (uint8_t i {'a'}; i <= 'z'; ++i)
+			{
+				impl[i] = i - 'a' + 0xA;
+			}
+			for (uint8_t i {'A'}; i <= 'Z'; ++i)
+			{
+				impl[i] = i - 'A' + 0xA;
+			}
+			return impl; // 1 to 1 digit mapping
+		}
+		()};
+
+		for (code_t code : *this)
+		{
+			value = value * radix
+			        +
+			        (table[code]);
+		}
+
+		return value;
+	}
+
+	template <format_t native,
+	          typename derive>
+	constexpr auto cable<native, derive>::stof(uint8_t radix) const noexcept -> double
+	{
+		assert(2 <= radix && radix <= 36);
+
+		double value {0};
+		size_t scale {0};
+
+		bool _ {false};
+
+		constexpr static const auto table {[]
+		{
+			std::array<uint8_t, 256> impl {255};
+
+			for (uint8_t i {'0'}; i <= '9'; ++i)
+			{
+				impl[i] = i - '0' + 0x0;
+			}
+			for (uint8_t i {'a'}; i <= 'z'; ++i)
+			{
+				impl[i] = i - 'a' + 0xA;
+			}
+			for (uint8_t i {'A'}; i <= 'Z'; ++i)
+			{
+				impl[i] = i - 'A' + 0xA;
+			}
+			return impl; // 1 to 1 digit mapping
+		}
+		()};
+
+		for (code_t code : *this)
+		{
+			if (code == '.')
+			{
+				_ = true;
+				continue;
+			}
+
+			value = value * radix
+			        +
+			        (table[code]);
+
+			if (_ /* ??? */)
+			{
+				scale *= radix;
+			}
+		}
+
+		return value / scale;
+	}
+
+	template <format_t native,
+	          typename derive>
 	constexpr auto cable<native, derive>::begin() const noexcept -> const_forward_iterator // requires nothing; always active
 	{
 		return {this->head()};

@@ -663,21 +663,27 @@ namespace x69
 
 	template <format_t native,
 	          typename malloc>
-	template <typename alias, format_t trait> constexpr str<native, malloc>::cursor<alias, trait>::operator const typename codec<native>::unit_t*() const noexcept
+	template <typename alias,
+	          format_t trait>
+	constexpr str<native, malloc>::cursor<alias, trait>::operator const typename codec<native>::unit_t*() const noexcept
 	{
 		return this->__needle__();
 	}
 
 	template <format_t native,
 	          typename malloc>
-	template <typename alias, format_t trait> constexpr str<native, malloc>::cursor<alias, trait>::operator const typename codec<native>::unit_t*() /*&*/ noexcept
+	template <typename alias,
+	          format_t trait>
+		constexpr str<native, malloc>::cursor<alias, trait>::operator const typename codec<native>::unit_t*() /*&*/ noexcept
 	{
 		return this->__needle__();
 	}
 
 	template <format_t native,
 	          typename malloc>
-	template <typename alias, format_t trait> constexpr auto str<native, malloc>::cursor<alias, trait>::operator*() const noexcept -> value_type
+	template <typename alias,
+	          format_t trait>
+	constexpr auto str<native, malloc>::cursor<alias, trait>::operator*() const noexcept -> value_type
 	{
 		switch (this->policy)
 		{
@@ -688,7 +694,9 @@ namespace x69
 
 	template <format_t native,
 	          typename malloc>
-	template <typename alias, format_t trait> constexpr auto str<native, malloc>::cursor<alias, trait>::__needle__() const noexcept -> unit_t*
+	template <typename alias,
+	          format_t trait>
+	constexpr auto str<native, malloc>::cursor<alias, trait>::__needle__() const noexcept -> unit_t*
 	{
 		switch (this->policy)
 		{
@@ -699,7 +707,9 @@ namespace x69
 
 	template <format_t native,
 	          typename malloc>
-	template <typename alias, format_t trait> constexpr auto str<native, malloc>::cursor<alias, trait>::operator++(   ) noexcept -> alias&
+	template <typename alias,
+	          format_t trait>
+	constexpr auto str<native, malloc>::cursor<alias, trait>::operator++(   ) noexcept -> alias&
 	{
 		/**/ if constexpr (trait == "LTR") this->offset += codec<native>::next(this->__needle__());
 		else if constexpr (trait == "RTL") this->offset -= codec<native>::back(this->__needle__());
@@ -711,7 +721,9 @@ namespace x69
 
 	template <format_t native,
 	          typename malloc>
-	template <typename alias, format_t trait> constexpr auto str<native, malloc>::cursor<alias, trait>::operator++(int) noexcept -> alias
+	template <typename alias,
+	          format_t trait>
+	constexpr auto str<native, malloc>::cursor<alias, trait>::operator++(int) noexcept -> alias
 	{
 		const auto clone {*this};
 		               ++(*this);
@@ -721,7 +733,9 @@ namespace x69
 
 	template <format_t native,
 	          typename malloc>
-	template <typename alias, format_t trait> constexpr auto str<native, malloc>::cursor<alias, trait>::operator--(   ) noexcept -> alias&
+	template <typename alias,
+	          format_t trait>
+	constexpr auto str<native, malloc>::cursor<alias, trait>::operator--(   ) noexcept -> alias&
 	{
 		/**/ if constexpr (trait == "LTR") this->offset -= codec<native>::back(this->__needle__());
 		else if constexpr (trait == "RTL") this->offset += codec<native>::next(this->__needle__());
@@ -733,7 +747,9 @@ namespace x69
 
 	template <format_t native,
 	          typename malloc>
-	template <typename alias, format_t trait> constexpr auto str<native, malloc>::cursor<alias, trait>::operator--(int) noexcept -> alias
+	template <typename alias,
+	          format_t trait>
+	constexpr auto str<native, malloc>::cursor<alias, trait>::operator--(int) noexcept -> alias
 	{
 		const auto clone {*this};
 		               --(*this);
@@ -743,7 +759,9 @@ namespace x69
 
 	template <format_t native,
 	          typename malloc>
-	template <typename alias, format_t trait> constexpr auto str<native, malloc>::cursor<alias, trait>::operator+(size_t value) noexcept -> alias
+	template <typename alias,
+	          format_t trait>
+	constexpr auto str<native, malloc>::cursor<alias, trait>::operator+(size_t value) noexcept -> alias
 	{
 		/*&*/ auto clone {*this};
 
@@ -754,7 +772,9 @@ namespace x69
 
 	template <format_t native,
 	          typename malloc>
-	template <typename alias, format_t trait> constexpr auto str<native, malloc>::cursor<alias, trait>::operator-(size_t value) noexcept -> alias
+	template <typename alias,
+	          format_t trait>
+	constexpr auto str<native, malloc>::cursor<alias, trait>::operator-(size_t value) noexcept -> alias
 	{
 		/*&*/ auto clone {*this};
 
@@ -765,7 +785,9 @@ namespace x69
 
 	template <format_t native,
 	          typename malloc>
-	template <typename alias, format_t trait> constexpr auto str<native, malloc>::cursor<alias, trait>::operator+=(size_t value) noexcept -> alias&
+	template <typename alias,
+	          format_t trait>
+	constexpr auto str<native, malloc>::cursor<alias, trait>::operator+=(size_t value) noexcept -> alias&
 	{
 		// auto clone {*this};
 
@@ -776,7 +798,9 @@ namespace x69
 
 	template <format_t native,
 	          typename malloc>
-	template <typename alias, format_t trait> constexpr auto str<native, malloc>::cursor<alias, trait>::operator-=(size_t value) noexcept -> alias&
+	template <typename alias,
+	          format_t trait>
+	constexpr auto str<native, malloc>::cursor<alias, trait>::operator-=(size_t value) noexcept -> alias&
 	{
 		// auto clone {*this};
 
@@ -787,21 +811,27 @@ namespace x69
 
 	template <format_t native,
 	          typename malloc>
-	template <typename alias, format_t trait> constexpr auto str<native, malloc>::cursor<alias, trait>::operator==(const cursor& rhs) const noexcept -> bool
+	template <typename alias,
+	          format_t trait>
+	constexpr auto str<native, malloc>::cursor<alias, trait>::operator==(const cursor& rhs) const noexcept -> bool
 	{
 		return this->weight == rhs.weight && this->common->target == rhs.common->target;
 	}
 
 	template <format_t native,
 	          typename malloc>
-	template <typename alias, format_t trait> constexpr auto str<native, malloc>::cursor<alias, trait>::operator!=(const cursor& rhs) const noexcept -> bool
+	template <typename alias,
+	          format_t trait>
+	constexpr auto str<native, malloc>::cursor<alias, trait>::operator!=(const cursor& rhs) const noexcept -> bool
 	{
 		return this->weight != rhs.weight || this->common->target != rhs.common->target;
 	}
 
 	template <format_t native,
 	          typename malloc>
-	template <typename alias, format_t trait> [[nodiscard]] constexpr str<native, malloc>::cursor<alias, trait>::proxy::operator code_t() const noexcept
+	template <typename alias,
+	          format_t trait>
+	[[nodiscard]] constexpr str<native, malloc>::cursor<alias, trait>::proxy::operator code_t() const noexcept
 	{
 		code_t code;
 
@@ -817,7 +847,9 @@ namespace x69
 
 	template <format_t native,
 	          typename malloc>
-	template <typename alias, format_t trait> constexpr auto str<native, malloc>::cursor<alias, trait>::proxy::operator=(code_t code) noexcept -> proxy&
+	template <typename alias,
+	          format_t trait>
+	constexpr auto str<native, malloc>::cursor<alias, trait>::proxy::operator=(code_t code) noexcept -> proxy&
 	{
 		const auto mutate {this->common->target->__insert__(this->needle, code, [&]
 		{
@@ -859,14 +891,18 @@ namespace x69
 
 	template <format_t native,
 	          typename malloc>
-	template <typename alias, format_t trait> constexpr auto str<native, malloc>::cursor<alias, trait>::proxy::operator==(code_t code) const noexcept -> bool
+	template <typename alias,
+	          format_t trait>
+	constexpr auto str<native, malloc>::cursor<alias, trait>::proxy::operator==(code_t code) const noexcept -> bool
 	{
 		return this->operator code_t() == code;
 	}
 
 	template <format_t native,
 	          typename malloc>
-	template <typename alias, format_t trait> constexpr auto str<native, malloc>::cursor<alias, trait>::proxy::operator!=(code_t code) const noexcept -> bool
+	template <typename alias,
+	          format_t trait>
+	constexpr auto str<native, malloc>::cursor<alias, trait>::proxy::operator!=(code_t code) const noexcept -> bool
 	{
 		return this->operator code_t() != code;
 	}
@@ -934,8 +970,8 @@ namespace x69
 	          typename malloc>
 	constexpr auto str<native, malloc>::writer::operator=(code_t code) noexcept -> writer&
 	{
-		const unit_t* head {this->src->__head__()};
-		const unit_t* tail {this->src->__tail__()};
+		const unit_t* head {this->src->head()};
+		const unit_t* tail {this->src->tail()};
 
 		if constexpr (!codec<native>::is_variable
 		              &&

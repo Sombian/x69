@@ -12,8 +12,8 @@ namespace x69
 	          /* allocator */>
 	[[nodiscard]] constexpr txt<native>::reader::operator code_t() const noexcept
 	{
-		const unit_t* head {this->src->__head__};
-		const unit_t* tail {this->src->__tail__};
+		const unit_t* head {this->src->head};
+		const unit_t* tail {this->src->tail};
 
 		if constexpr (!codec<native>::is_variable
 		              &&

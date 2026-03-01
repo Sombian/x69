@@ -204,6 +204,11 @@ namespace x69
 		constexpr auto substr(size_t start, range  until) const noexcept -> txt<native>;
 		constexpr auto substr(size_t start, size_t until) const noexcept -> txt<native>;
 
+		// string to integer; ASSUMES ALL CODE POINTS ARE THAT OF NUMERICAL REPRESENTATION
+		constexpr auto stoi(uint8_t radix = 10) const noexcept -> size_t;
+		// string to decimal; ASSUMES ALL CODE POINTS ARE THAT OF NUMERICAL REPRESENTATION
+		constexpr auto stof(uint8_t radix = 10) const noexcept -> double;
+
 		// iterators
 
 		constexpr auto begin() const noexcept -> const_forward_iterator; // requires nothing; always active
@@ -211,6 +216,7 @@ namespace x69
 
 		constexpr auto rbegin() const noexcept -> const_reverse_iterator requires (!codec<native>::is_stateful);
 		constexpr auto rend() const noexcept -> const_reverse_iterator requires (!codec<native>::is_stateful);
+
 
 		// operators
 
@@ -244,7 +250,7 @@ namespace x69
 
 		template <typename string> requires requires (string&& _)
 		                                             { txt {_}; } && (!std::is_base_of_v<std::remove_cvref_t<string>, derive>)
-		                                                             // fix; ambiguious overloads by causes by derived class
+		                                                             // fix; ambiguious overloads causes by derived class(es)
 		friend constexpr auto operator+(string&& lhs, const derive& rhs) noexcept -> concat<decltype(txt {lhs}), txt<native>>
 		{
 			return {/* no need for static_cast */ {txt {lhs}}, {rhs}};

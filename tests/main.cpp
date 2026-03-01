@@ -33,16 +33,25 @@ TEST_CASE("string")
 {
 	SUBCASE("SSO23")
 	{
-		x69::str8 small {u8"ABCDEFGHIJKLMNOPQRSTUVW"};
-		x69::str8 large {u8"ÁBCDEFGHIJKLMNOPQRSTUVW"};
+		x69::str8 small {u8"#마도카☆마기카!"};
+		x69::str8 large {u8"#마도카☆마기카ƒ"};
 
 		CHECK(small.size() == small.capacity());
 		CHECK(large.size() == large.capacity());
 	}
 
+	SUBCASE("utils")
+	{
+		x69::txt8 _67 {u8"67"};
+		x69::txt8 _FF {u8"FF"};
+
+		CHECK(_67.stoi(10) == 6'7);
+		CHECK(_FF.stoi(16) == 255);
+	}
+
 	SUBCASE("index")
 	{
-		x69::str8 str {u8"티라미수"};
+		x69::txt8 str {u8"티라미수"};
 
 		using x69::range::N;
 
@@ -55,18 +64,18 @@ TEST_CASE("string")
 		CHECK(str.substr(0, 4) == str);
 	}
 
-	SUBCASE("concat")
+	SUBCASE("A + B")
 	{
-		x69::str8 티라 {u8"티라"};
-		x69::str8 미수 {u8"미수"};
+		x69::txt8 티라 {u8"티라"};
+		x69::txt8 미수 {u8"미수"};
 
-		CHECK(티라.starts_with(티라));
-		CHECK(티라.ends_with(u"티라"));
+		CHECK(미수 == u"미수");
+		CHECK(미수.length() == 2);
 
-		CHECK(미수.starts_with(미수));
-		CHECK(미수.ends_with(u"미수"));
+		CHECK(티라 == u"티라");
+		CHECK(티라.length() == 2);
 
-		x69::str8 X미수 {u"?" + 미수};
+		x69::str8 X미수 {'?' + 미수};
 		x69::str8 티라X {티라 + '?'};
 
 		CHECK(X미수 == u"?미수");
@@ -78,7 +87,7 @@ TEST_CASE("string")
 
 	SUBCASE("split")
 	{
-		x69::str8 str {u8"티라미수"
+		x69::txt8 str {u8"티라미수"
 		               u8"☆"
 		               u8"치즈케잌"
 		               u8"☆"
@@ -100,7 +109,7 @@ TEST_CASE("string")
 
 	SUBCASE("range")
 	{
-		x69::str8 src {u8"티라미수"
+		x69::txt8 src {u8"티라미수"
 		               u8"☆"
 		               u8"치즈케잌"
 		               u8"☆"
@@ -109,11 +118,11 @@ TEST_CASE("string")
 		std::vector<x69::code_t> foo;
 		std::vector<x69::code_t> bar;
 
-		if (/*&*/ x69::str str {src}; 0 < str.size())
+		if (/*&*/ x69::str8 str {src}; 0 < str.size())
 		{
 			for (auto code : str) foo.push_back(code);
 		}
-		if (const x69::str str {src}; 0 < str.size())
+		if (const x69::str8 str {src}; 0 < str.size())
 		{
 			for (auto code : str) bar.push_back(code);
 		}
