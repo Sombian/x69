@@ -24,27 +24,27 @@
 inline auto operator>>(std::istream& os, char32_t code) noexcept -> std::istream&;
 inline auto operator<<(std::ostream& os, char32_t code) noexcept -> std::ostream&;
 
-#ifndef x69_MALLOC // sets allocator 🎉
-#define x69_MALLOC(T) std::allocator<T>
-#endif             // sets allocator 🎉
+#ifndef x69_MALLOC //=============//
+#define x69_MALLOC std::allocator //
+#endif             //=============//
 
 #define COPY_CONSTRUCTOR(T) constexpr T(const T&  other) noexcept
 #define MOVE_CONSTRUCTOR(T) constexpr T(/*&*/ T&& other) noexcept
 
-#define COPY_ASSIGNMENT(T) constexpr auto operator=(const T&  rhs) noexcept -> T&
-#define MOVE_ASSIGNMENT(T) constexpr auto operator=(/*&*/ T&& rhs) noexcept -> T&
+#define COPY_ASSIGNMENT(T) constexpr auto operator=(const T&  other) noexcept -> T&
+#define MOVE_ASSIGNMENT(T) constexpr auto operator=(/*&*/ T&& other) noexcept -> T&
+
+//┌─────────────────────────────────────────────────────────────┐
+//│ special thanks to facebook's folly::FBString                │
+//│                                                             │
+//│ SSO mode uses every bytes of heap string struct using union │
+//│ this was achievable thanks to the very clever memory layout │
+//│                                                             │
+//│ for more, watch https://www.youtube.com/watch?v=kPR8h4-qZdk │
+//└─────────────────────────────────────────────────────────────┘
 
 namespace x69
 {
-	//┌─────────────────────────────────────────────────────────────┐
-	//│ special thanks to facebook's folly::FBString                │
-	//│                                                             │
-	//│ SSO mode uses every bytes of heap string struct using union │
-	//│ this was achievable thanks to the very clever memory layout │
-	//│                                                             │
-	//│ for more, watch https://www.youtube.com/watch?v=kPR8h4-qZdk │
-	//└─────────────────────────────────────────────────────────────┘
-
 	class code_t final
 	{
 		char32_t arg;
@@ -94,7 +94,7 @@ namespace x69
 	    static constexpr const bool is_variable {IS_VARIABLE};               \
 	    static constexpr const bool is_stateful {IS_STATEFUL};               \
 	                                                                         \
-	    using unit_t = UNIT;                                                 \
+	    typedef UNIT unit_t;                                                 \
 	                                                                         \
 	    constexpr  codec() noexcept = delete;                                \
 	    constexpr ~codec() noexcept = delete;                                \
@@ -130,8 +130,8 @@ namespace x69
 
 	#undef CODER_AND_DECODER
 
-	template <format_t local, typename alloc = x69_MALLOC(typename codec<local>::unit_t)> class str;
-	template <format_t local                                                            > class txt;
+	template <format_t native, template <typename> typename malloc = x69_MALLOC> class str;
+	template <format_t native                                                  > class txt;
 
 	//┌───────┬───────┬────────────┬─────────────────┐
 	//│ class │ owns? │ null-term? │ use-after-free? │
@@ -144,22 +144,18 @@ namespace x69
 	template <format_t native,
 	          typename derive> class cable
 	{
-		template <format_t, typename> friend class cable;
+		   template <format_t,                  typename> friend class cable;
+		// template <format_t, template <class> typename> friend class   str;
+		// template <format_t                           > friend class   txt;
+
+		typedef typename codec<native>::unit_t unit_t;
 
 		//┌───────────────────────────────────────────────┐
 		//│ note: helper funs are not encapsulated within │
 		//│       and it was deliberate; to cut bin bloat │
 		//└───────────────────────────────────────────────┘
 
-		using unit_t = typename codec<native>::unit_t;
-
-		constexpr auto head() const noexcept -> const unit_t*;
-		constexpr auto tail() const noexcept -> const unit_t*;
-
 		template <typename lhs_t, typename rhs_t> class concat;
-
-		class const_forward_iterator; friend const_forward_iterator;
-		class const_reverse_iterator; friend const_reverse_iterator;
 
 	public:
 		// returns the number of code units, excluding NULL-TERMINATOR.
@@ -209,15 +205,6 @@ namespace x69
 		// string to decimal; ASSUMES ALL CODE POINTS ARE THAT OF NUMERICAL REPRESENTATION
 		constexpr auto stof(uint8_t radix = 10) const noexcept -> double;
 
-		// iterators
-
-		constexpr auto begin() const noexcept -> const_forward_iterator; // requires nothing; always active
-		constexpr auto end() const noexcept -> const_forward_iterator; // requires nothing; always active
-
-		constexpr auto rbegin() const noexcept -> const_reverse_iterator requires (!codec<native>::is_stateful);
-		constexpr auto rend() const noexcept -> const_reverse_iterator requires (!codec<native>::is_stateful);
-
-
 		// operators
 
 		constexpr auto operator[](size_t rhs) const noexcept -> decltype(auto);
@@ -265,8 +252,8 @@ namespace x69
 		template <typename lhs_t,
 		          typename rhs_t> class concat
 		{
-			const lhs_t lhs;
-			const rhs_t rhs;
+			lhs_t lhs;
+			rhs_t rhs;
 
 		public:
 
@@ -279,8 +266,10 @@ namespace x69
 			           rhs {rhs}
 			{}
 
-			   template <format_t alien, typename arena> constexpr operator str<alien, arena>() const noexcept;
-			// template <format_t alien, typename arena> constexpr operator str<alien, arena>() /*&*/ noexcept;
+			template <format_t exotic,
+			          template <class>
+			          typename malloc> constexpr operator str<exotic,
+			                                                  malloc>() const noexcept;
 
 			// this + ???
 
@@ -310,72 +299,33 @@ namespace x69
 
 		private:
 
-			constexpr auto __for_each__(const auto&& fun) const noexcept -> void;
+			   constexpr auto __for_each__(const auto&& fun) const noexcept -> void;
+			// constexpr auto __for_each__(const auto&& fun) /*&*/ noexcept -> void;
 		};
-
-		template <typename alias,
-		          format_t trait> class cursor
-		{
-			const unit_t* ptr;
-
-		public:
-
-			using iterator_category = std::conditional_t<codec<native>::is_stateful, std::forward_iterator_tag, std::bidirectional_iterator_tag>;
-			using iterator_concept = std::conditional_t<codec<native>::is_stateful, std::forward_iterator_tag, std::bidirectional_iterator_tag>;
-			using difference_type = std::ptrdiff_t;
-			using value_type = code_t;
-			using reference = code_t;
-
-			constexpr cursor
-			(
-				decltype(ptr) ptr
-			)
-			noexcept : ptr {ptr}
-			{}
-
-			[[nodiscard]] constexpr operator const unit_t*() const noexcept;
-			[[nodiscard]] constexpr operator const unit_t*() /*&*/ noexcept;
-
-			constexpr auto operator*() const noexcept -> value_type;
-
-			// stl compat; default constructible
-			constexpr  cursor() noexcept = default;
-			constexpr ~cursor() noexcept = default;
-
-			constexpr auto operator++(   ) noexcept -> alias&;
-			constexpr auto operator++(int) noexcept -> alias;
-			constexpr auto operator--(   ) noexcept -> alias&;
-			constexpr auto operator--(int) noexcept -> alias;
-
-			constexpr auto operator+(size_t value) noexcept -> alias;
-			constexpr auto operator-(size_t value) noexcept -> alias;
-
-			constexpr auto operator+=(size_t value) noexcept -> alias&;
-			constexpr auto operator-=(size_t value) noexcept -> alias&;
-
-			constexpr auto operator==(const cursor& rhs) const noexcept -> bool = default;
-			constexpr auto operator!=(const cursor& rhs) const noexcept -> bool = default;
-		};
-
-		class const_forward_iterator : public cursor<const_forward_iterator, "LTR"> { public: using cursor<const_forward_iterator, "LTR">::cursor; };
-		class const_reverse_iterator : public cursor<const_reverse_iterator, "RTL"> { public: using cursor<const_reverse_iterator, "RTL">::cursor; };
 	};
 
+	//┌───────┬────────────┬─────────────────┐
+	//│ owns? │ null-term? │ use-after-free? │
+	//├───────┼────────────┼─────────────────┤
+	//│   T   │   always   │      safe       │
+	//└───────┴────────────┴─────────────────┘
+
 	template <format_t native,
+	          template <class>
 	          typename malloc> class str final : public cable<native, str<native,
 	                                                                      malloc>>
 	{
-		template <format_t, typename> friend class cable;
-		template <format_t, typename> friend class    str;
-		template <format_t          > friend class    txt;
+		template <format_t,                  typename> friend class cable;
+		template <format_t, template <class> typename> friend class   str;
+		template <format_t                           > friend class   txt;
 
-		//┌───────┬────────────┬─────────────────┐
-		//│ owns? │ null-term? │ use-after-free? │
-		//├───────┼────────────┼─────────────────┤
-		//│   T   │   always   │      safe       │
-		//└───────┴────────────┴─────────────────┘
+		typedef typename codec<native>::unit_t unit_t;
 
-		using unit_t = typename codec<native>::unit_t;
+		class reader; friend reader;
+		class writer; friend writer;
+
+		class forward_iterator; friend forward_iterator;
+		class reverse_iterator; friend reverse_iterator;
 
 		#define IS_LITTLE       \
 		(                       \
@@ -404,16 +354,11 @@ namespace x69
 			unit_t* head;
 			unit_t* last;
 			size_t  size : (sizeof(size_t) * 8) - (sizeof(mode_t) * 8);
-			size_t  meta : (sizeof(mode_t) * 8) - (sizeof(mode_t) * 0);
+			size_t  meta :                        (sizeof(mode_t) * 8);
 
 			[[nodiscard]] constexpr operator const unit_t*() const noexcept;
 			[[nodiscard]] constexpr operator /*&*/ unit_t*() /*&*/ noexcept;
 		};
-
-		static constexpr const uint8_t MAX {            (sizeof(buffer) - 1) / (sizeof(unit_t) * 1)};
-		static constexpr const uint8_t RMB {            (sizeof(buffer) - 1) * (         1        )};
-		static constexpr const uint8_t SFT {IS_LITTLE ? (         0        ) : (         1        )};
-		static constexpr const uint8_t MSK {IS_LITTLE ? (0b10000000        ) : (0b00000001        )};
 
 		//┌───────────────────────────┐
 		//│           small           │
@@ -423,65 +368,29 @@ namespace x69
 		//│           bytes           │
 		//└───────────────────────────┘
 
-		struct storage : public malloc
+		[[no_unique_address]] malloc<unit_t> tag;
+
+		union
 		{
-			union
-			{
-				buffer large;
+			unit_t small [sizeof(buffer) / sizeof(unit_t)];
 
-				unit_t small
-				[sizeof(buffer) / sizeof(unit_t)];
+			buffer large;
 
-				uint8_t bytes
-				[sizeof(buffer) / sizeof(uint8_t)];
-			}
-			__union__;
-
-			constexpr  storage() noexcept;
-			constexpr ~storage() noexcept;
-
-			// single source of truth; category.
-			constexpr auto mode() const noexcept -> mode_t;
-			constexpr auto mode() /*&*/ noexcept -> mode_t;
+			uint8_t bytes [sizeof(buffer) / sizeof(uint8_t)];
 		};
-		#undef IS_LITTLE
 
-		static_assert(sizeof(storage) == sizeof(buffer));
-		static_assert(std::is_standard_layout_v<buffer>);
-		static_assert(std::is_trivially_copyable_v<buffer>);
 		static_assert(sizeof(buffer) == sizeof(size_t) * 3);
 		static_assert(alignof(buffer) == alignof(size_t) * 1);
+
 		static_assert(offsetof(buffer, head) == sizeof(size_t) * 0);
 		static_assert(offsetof(buffer, last) == sizeof(size_t) * 1);
 
-		// returns ptr to buffer's 1st element.
-		constexpr auto head() const noexcept -> const unit_t*;
-		constexpr auto head() /*&*/ noexcept -> /*&*/ unit_t*;
+		static constexpr const uint8_t MAX {            (sizeof(buffer) - 1) / (sizeof(unit_t) * 1)};
+		static constexpr const uint8_t RMB {            (sizeof(buffer) - 1) * (         1        )};
+		static constexpr const uint8_t SFT {IS_LITTLE ? (         0        ) : (         1        )};
+		static constexpr const uint8_t MSK {IS_LITTLE ? (0b10000000        ) : (0b00000001        )};
 
-		// returns ptr to buffer's last element.
-		constexpr auto tail() const noexcept -> const unit_t*;
-		constexpr auto tail() /*&*/ noexcept -> /*&*/ unit_t*;
-
-		// returns ptr to buffer's last = capacity.
-		constexpr auto last() const noexcept -> const unit_t*;
-		constexpr auto last() /*&*/ noexcept -> /*&*/ unit_t*;
-
-		// fixes invariant; use it after internal manipulation.
-		constexpr auto __size__(size_t value) noexcept -> void;
-
-		storage store;
-
-		class reader; friend reader;
-		class writer; friend writer;
-
-		class forward_iterator; friend forward_iterator;
-		class reverse_iterator; friend reverse_iterator;
-
-		typedef struct { unit_t* dest; bool does_shift;
-		                               bool does_alloc; } __insert__t;
-
-		// 2x capacity growth
-		constexpr auto __insert__(unit_t* dest, code_t code, int8_t step) noexcept -> __insert__t;
+		#undef IS_LITTLE
 
 	public:
 
@@ -501,6 +410,14 @@ namespace x69
 		explicit constexpr operator const unit_t*() const noexcept;
 		explicit constexpr operator /*&*/ unit_t*() /*&*/ noexcept;
 
+		template <typename string> requires requires (string&& _)
+		                                             { txt {_}; }
+		constexpr str(string&& value) noexcept;
+		constexpr str(code_t   value) noexcept;
+
+		constexpr  str() noexcept;
+		constexpr ~str() noexcept;
+
 		// rule of 5
 
 		COPY_CONSTRUCTOR(str);
@@ -509,16 +426,6 @@ namespace x69
 		COPY_ASSIGNMENT(str);
 		MOVE_ASSIGNMENT(str);
 
-		// constructors
-
-		constexpr  str() noexcept = default;
-		constexpr ~str() noexcept = default;
-
-		template <typename string> requires requires (string&& _)
-		                                             { txt {_}; }
-		constexpr str(string&& value) noexcept;
-		constexpr str(code_t   value) noexcept;
-
 		// returns the number of code units it can hold, excluding NULL-TERMINATOR.
 		constexpr auto capacity(/* getter */) const noexcept -> size_t;
 		// changes the number of code units it can hold, excluding NULL-TERMINATOR.
@@ -526,14 +433,14 @@ namespace x69
 
 		// iterator
 
-		using cable<native, str>::begin; // fix; name hiding
-		using cable<native, str>::end; // fix; name hiding
+		constexpr auto begin() const noexcept -> decltype(auto); // requires nothing; always active
+		constexpr auto end() const noexcept -> decltype(auto); // requires nothing; always active
 
 		constexpr auto begin() /*&*/ noexcept -> forward_iterator; // requires nothing; always active
 		constexpr auto end() /*&*/ noexcept -> forward_iterator; // requires nothing; always active
 
-		using cable<native, str>::rbegin; // fix; name hiding
-		using cable<native, str>::rend; // fix; name hiding
+		constexpr auto rbegin() const noexcept -> decltype(auto) requires (!codec<native>::is_stateful);
+		constexpr auto rend() const noexcept -> decltype(auto) requires (!codec<native>::is_stateful);
 
 		constexpr auto rbegin() /*&*/ noexcept -> reverse_iterator requires (!codec<native>::is_stateful);
 		constexpr auto rend() /*&*/ noexcept -> reverse_iterator requires (!codec<native>::is_stateful);
@@ -562,25 +469,57 @@ namespace x69
 
 	private:
 
+		constexpr auto __init__() /*&*/ noexcept -> void;
+
+		// source of truth; returns SSO?
+		constexpr auto __mode__() const noexcept -> mode_t;
+
+		// out=ptr to buffer's 1st element.
+		constexpr auto __head__() const noexcept -> const unit_t*;
+		constexpr auto __head__() /*&*/ noexcept -> /*&*/ unit_t*;
+
+		// out=ptr to buffer's last element.
+		constexpr auto __tail__() const noexcept -> const unit_t*;
+		constexpr auto __tail__() /*&*/ noexcept -> /*&*/ unit_t*;
+
+		// out=ptr to buffer's last = capacity.
+		constexpr auto __last__() const noexcept -> const unit_t*;
+		constexpr auto __last__() /*&*/ noexcept -> /*&*/ unit_t*;
+
+		// invoke it after buffer manipulation.
+		constexpr auto __size__(size_t value) noexcept -> void;
+
+		typedef struct { unit_t* dest; bool does_shift;
+		                               bool does_alloc; } __insert__t;
+
+		// insert at position 2x capacity growth.
+		constexpr auto __insert__(unit_t* dest,
+		                          code_t  code,
+		                          int8_t  step) noexcept -> __insert__t;
+
 		class reader
 		{
-			using self_t = str;
+			typedef str self_t;
+			friend      self_t;
 
 			const self_t* src;
-			const size_t  arg;
+			/*&*/ size_t  key;
 
 		public:
 
 			constexpr reader
 			(
 				decltype(src) src,
-				decltype(arg) arg
+				decltype(key) key
 			)
 			noexcept : src {src},
-			           arg {arg}
+			           key {key}
 			{}
 
-			[[nodiscard]] constexpr operator code_t() const noexcept;
+			   constexpr operator code_t() const noexcept;
+			// constexpr operator code_t() /*&*/ noexcept;
+
+			// constexpr auto operator=(code_t code) noexcept -> writer&;
 
 			constexpr auto operator==(code_t code) const noexcept -> bool;
 			constexpr auto operator!=(code_t code) const noexcept -> bool;
@@ -588,24 +527,27 @@ namespace x69
 
 		class writer
 		{
-			using self_t = str;
+			typedef str self_t;
+			friend      self_t;
 
 			/*&*/ self_t* src;
-			const size_t  arg;
+			/*&*/ size_t  key;
 
 		public:
 
 			constexpr writer
 			(
 				decltype(src) src,
-				decltype(arg) arg
+				decltype(key) key
 			)
 			noexcept : src {src},
-			           arg {arg}
+			           key {key}
 			{}
 
+			   constexpr operator code_t() const noexcept;
+			// constexpr operator code_t() /*&*/ noexcept;
+
 			constexpr auto operator=(code_t code) noexcept -> writer&;
-			[[nodiscard]] constexpr operator code_t() const noexcept;
 
 			constexpr auto operator==(code_t code) const noexcept -> bool;
 			constexpr auto operator!=(code_t code) const noexcept -> bool;
@@ -614,30 +556,8 @@ namespace x69
 		template <typename alias,
 		          format_t trait> class cursor
 		{
-			using self_t = str;
-
-			// std::views::reverse impl in Clang/GCC/MSVC:
-			//
-			// ┌─────────────────────────────────────────────────────┐
-			// │ template <typename iterator> class reverse_iterator │
-			// │ {                                                   │
-			// │     iterator current;                               │
-			// │                                                     │
-			// │     constexpr auto operator*() const -> value_type  │
-			// │     {                                               │
-			// │         iterator temporal {current};                │
-			// │                                                     │
-			// │         --temporal;                                 │
-			// │                                                     │
-			// │         return *temporal; // dangling               │
-			// │     }                                               │
-			// │ }                                                   │
-			// └─────────────────────────────────────────────────────┘
-			//
-			// due to proxy is made from temporal <it> clone
-			// self healing attempt that involves deref is UB
-			// →
-			// <std::shared_ptr> is perfect solution to this!
+			typedef str self_t;
+			friend      self_t;
 
 			enum zero_t
 			{
@@ -651,8 +571,8 @@ namespace x69
 
 			public:
 
-				/*&&&*/ self_t* target;
-				mutable unit_t* anchor;
+				self_t* target;
+				unit_t* anchor;
 
 				constexpr state
 				(
@@ -683,25 +603,51 @@ namespace x69
 				           policy {policy}
 				{}
 
-				[[nodiscard]] constexpr operator code_t() const noexcept;
+				   constexpr operator code_t() const noexcept;
+				// constexpr operator code_t() /*&*/ noexcept;
+
 				constexpr auto operator=(code_t code) noexcept -> proxy&;
 
 				constexpr auto operator==(code_t code) const noexcept -> bool;
 				constexpr auto operator!=(code_t code) const noexcept -> bool;
 			};
 
-			friend str;
-
 			std::shared_ptr<state> common;
 			size_t                 offset;
 			size_t                 weight;
 			zero_t                 policy;
 
+			// std::views::reverse impl in Clang/GCC/MSVC:
+			//
+			// ┌─────────────────────────────────────────────────────┐
+			// │ template <typename iterator> class reverse_iterator │
+			// │ {                                                   │
+			// │     iterator current;                               │
+			// │                                                     │
+			// │     constexpr auto operator*() const -> value_type  │
+			// │     {                                               │
+			// │         iterator temporal {current};                │
+			// │                                                     │
+			// │         --temporal;                                 │
+			// │                                                     │
+			// │         return *temporal; // dangling               │
+			// │     }                                               │
+			// │ }                                                   │
+			// └─────────────────────────────────────────────────────┘
+			//
+			// due to proxy is made from temporal <it> clone
+			// self healing attempt that involves deref is UB
+			// →
+			// <std::shared_ptr> is perfect solution to this!
+
 		public:
 
-			using iterator_category = std::conditional_t<codec<native>::is_stateful, std::forward_iterator_tag, std::bidirectional_iterator_tag>;
-			using iterator_concept = std::conditional_t<codec<native>::is_stateful, std::forward_iterator_tag, std::bidirectional_iterator_tag>;
-			using difference_type = std::ptrdiff_t;
+			using iterator_category = std::conditional_t<codec<native>::is_stateful, std::forward_iterator_tag,
+			                                                                         std::bidirectional_iterator_tag>;
+
+			using iterator_concept = std::conditional_t<codec<native>::is_stateful, std::forward_iterator_tag,
+			                                                                        std::bidirectional_iterator_tag>;
+
 			using value_type = proxy;
 			using reference = proxy;
 
@@ -718,14 +664,15 @@ namespace x69
 			           policy {policy}
 			{};
 
-			[[nodiscard]] constexpr operator const unit_t*() const noexcept;
-			[[nodiscard]] constexpr operator const unit_t*() /*&*/ noexcept;
-
-			constexpr auto operator*() const noexcept -> value_type;
+			// stl compat; convert into a ptr
+			constexpr operator const unit_t*() const noexcept;
+			constexpr operator const unit_t*() /*&*/ noexcept;
 
 			// stl compat; default constructible
 			constexpr  cursor() noexcept = default;
 			constexpr ~cursor() noexcept = default;
+
+			constexpr auto operator*() const noexcept -> value_type;
 
 			constexpr auto operator++(   ) noexcept -> alias&;
 			constexpr auto operator++(int) noexcept -> alias;
@@ -743,32 +690,40 @@ namespace x69
 
 		private:
 
-			constexpr auto __needle__() const noexcept -> unit_t*;
+			constexpr auto __incr__() const noexcept -> int8_t;
+			constexpr auto __decr__() const noexcept -> int8_t;
+			constexpr auto __dest__() const noexcept -> unit_t*;
 		};
 
-		class forward_iterator : public cursor<forward_iterator, "LTR"> { using cursor<forward_iterator, "LTR">::cursor; };
-		class reverse_iterator : public cursor<reverse_iterator, "RTL"> { using cursor<reverse_iterator, "RTL">::cursor; };
+		class forward_iterator : public cursor<forward_iterator, "LTR">
+		{ using cursor<forward_iterator, "LTR">::cursor; /* inherit */ };
+
+		class reverse_iterator : public cursor<reverse_iterator, "RTL">
+		{ using cursor<reverse_iterator, "RTL">::cursor; /* inherit */ };
 	};
+
+	//┌───────┬────────────┬─────────────────┐
+	//│ owns? │ null-term? │ use-after-free? │
+	//├───────┼────────────┼─────────────────┤
+	//│   F   │   maybe?   │      [UB]       │
+	//└───────┴────────────┴─────────────────┘
 
 	template <format_t native> class txt final : public cable<native, txt<native>>
 	{
-		template <format_t, typename> friend class cable;
-		template <format_t, typename> friend class   str;
-		template <format_t          > friend class   txt;
+		template <format_t,                  typename> friend class cable;
+		template <format_t, template <class> typename> friend class   str;
+		template <format_t                           > friend class   txt;
 
-		//┌───────┬────────────┬─────────────────┐
-		//│ owns? │ null-term? │ use-after-free? │
-		//├───────┼────────────┼─────────────────┤
-		//│   F   │   maybe?   │      [UB]       │
-		//└───────┴────────────┴─────────────────┘
-
-		using unit_t = typename codec<native>::unit_t;
+		typedef typename codec<native>::unit_t unit_t;
 
 		const unit_t* head;
 		const unit_t* tail;
 
 		friend class reader;
 		friend class writer;
+
+		class forward_iterator; friend forward_iterator;
+		class reverse_iterator; friend reverse_iterator;
 
 	public:
 
@@ -799,23 +754,28 @@ namespace x69
 		           tail {&str[N - 1]}
 		{}
 
-		template <typename arena>
+		template <template <class>
+		          typename malloc>
 		constexpr txt
 		(
-			const str<native, arena>& str
+			const str<native, malloc>& str
 		)
-		noexcept : head {str.head()},
-		           tail {str.tail()}
+		noexcept : head {str.__head__()},
+		           tail {str.__tail__()}
 		{}
 
-		template <typename arena>
+		template <template <class>
+		          typename malloc>
 		constexpr txt
 		(
-			/*&*/ str<native, arena>& str
+			/*&*/ str<native, malloc>& str
 		)
-		noexcept : head {str.head()},
-		           tail {str.tail()}
+		noexcept : head {str.__head__()},
+		           tail {str.__tail__()}
 		{}
+
+		constexpr  txt() noexcept = delete;
+		constexpr ~txt() noexcept = default;
 
 		COPY_CONSTRUCTOR(txt) = default;
 		MOVE_CONSTRUCTOR(txt) = default;
@@ -823,30 +783,37 @@ namespace x69
 		COPY_ASSIGNMENT(txt) = default;
 		MOVE_ASSIGNMENT(txt) = default;
 
-		constexpr  txt() noexcept = delete;
-		constexpr ~txt() noexcept = default;
+		constexpr auto begin() const noexcept -> forward_iterator; // requires nothing; always active
+		constexpr auto end() const noexcept -> forward_iterator; // requires nothing; always active
+
+		constexpr auto rbegin() const noexcept -> reverse_iterator requires (!codec<native>::is_stateful);
+		constexpr auto rend() const noexcept -> reverse_iterator requires (!codec<native>::is_stateful);
 
 	private:
 
 		class reader
 		{
-			using self_t = txt;
+			typedef txt self_t;
+			friend      self_t;
 
 			const self_t* src;
-			const size_t  arg;
+			/*&*/ size_t  key;
 
 		public:
 
 			constexpr reader
 			(
 				decltype(src) src,
-				decltype(arg) arg
+				decltype(key) arg
 			)
 			noexcept : src {src},
-			           arg {arg}
+			           key {arg}
 			{}
 
-			[[nodiscard]] constexpr operator code_t() const noexcept;
+			   constexpr operator code_t() const noexcept;
+			// constexpr operator code_t() /*&*/ noexcept;
+
+			// constexpr auto operator=(code_t code) noexcept -> writer&;
 
 			constexpr auto operator==(code_t code) const noexcept -> bool;
 			constexpr auto operator!=(code_t code) const noexcept -> bool;
@@ -854,28 +821,90 @@ namespace x69
 
 		class writer
 		{
-			using self_t = txt;
+			typedef txt self_t;
+			friend      self_t;
 
 			/*&*/ self_t* src;
-			const size_t  arg;
+			/*&*/ size_t  key;
 
 		public:
 
 			constexpr writer
 			(
 				decltype(src) src,
-				decltype(arg) arg
+				decltype(key) arg
 			)
 			noexcept : src {src},
-			           arg {arg}
+			           key {arg}
 			{}
 
+			   constexpr operator code_t() const noexcept;
+			// constexpr operator code_t() /*&*/ noexcept;
+
 			// constexpr auto operator=(code_t code) noexcept -> writer&;
-			[[nodiscard]] constexpr operator code_t() const noexcept;
 
 			constexpr auto operator==(code_t code) const noexcept -> bool;
 			constexpr auto operator!=(code_t code) const noexcept -> bool;
 		};
+
+		template <typename alias,
+		          format_t trait> class cursor
+		{
+			const unit_t* ptr;
+
+		public:
+
+			using iterator_category = std::conditional_t<codec<native>::is_stateful, std::forward_iterator_tag,
+			                                                                         std::bidirectional_iterator_tag>;
+
+			using iterator_concept = std::conditional_t<codec<native>::is_stateful, std::forward_iterator_tag,
+			                                                                        std::bidirectional_iterator_tag>;
+
+			using value_type = code_t;
+			using reference = code_t;
+
+			constexpr cursor
+			(
+				decltype(ptr) ptr
+			)
+			noexcept : ptr {ptr}
+			{}
+
+			// stl compat; convert into a ptr
+			constexpr operator const unit_t*() const noexcept;
+			constexpr operator const unit_t*() /*&*/ noexcept;
+
+			// stl compat; default constructible
+			constexpr  cursor() noexcept = default;
+			constexpr ~cursor() noexcept = default;
+
+			constexpr auto operator*() const noexcept -> value_type;
+
+			constexpr auto operator++(   ) noexcept -> alias&;
+			constexpr auto operator++(int) noexcept -> alias;
+			constexpr auto operator--(   ) noexcept -> alias&;
+			constexpr auto operator--(int) noexcept -> alias;
+
+			constexpr auto operator+(size_t value) noexcept -> alias;
+			constexpr auto operator-(size_t value) noexcept -> alias;
+
+			constexpr auto operator+=(size_t value) noexcept -> alias&;
+			constexpr auto operator-=(size_t value) noexcept -> alias&;
+
+			constexpr auto operator==(const cursor& rhs) const noexcept -> bool = default;
+			constexpr auto operator!=(const cursor& rhs) const noexcept -> bool = default;
+
+		private:
+
+			constexpr auto __incr__() const noexcept -> int8_t;
+			constexpr auto __decr__() const noexcept -> int8_t;
+		};
+
+		class forward_iterator : public cursor<forward_iterator, "LTR">
+		{ using cursor<forward_iterator, "LTR">::cursor; /* inherit */ };
+
+		class reverse_iterator : public cursor<reverse_iterator, "RTL">
+		{ using cursor<reverse_iterator, "RTL">::cursor; /* inherit */ };
 	};
 
 	namespace detail
@@ -1090,15 +1119,15 @@ namespace x69
 			return UTF8_STD;
 		}};
 
-		static const auto write_as_native {[]<format_t local, typename alloc>(std::ifstream& ifs, str<local, alloc>& str) -> void
+		static const auto write_as_native {[]<format_t native>(std::ifstream& ifs, str<native>& str) -> void
 		{
-			   using T = typename codec<local>::unit_t;
-			// using U = typename codec<alien>::unit_t;
+			   typedef typename codec<native>::unit_t T;
+			// typedef typename codec<exotic>::unit_t U;
 
 			T buffer;
 
-			T* dest {str.head()};
-			T* head {str.head()};
+			T* dest {str.__head__()};
+			T* head {str.__head__()};
 
 			while (ifs.read(reinterpret_cast<char*>(&buffer), sizeof(T)))
 			{
@@ -1115,15 +1144,15 @@ namespace x69
 			str.__size__(dest - head);
 		}};
 
-		static const auto write_as_exotic {[]<format_t local, typename alloc>(std::ifstream& ifs, str<local, alloc>& str) -> void
+		static const auto write_as_exotic {[]<format_t native>(std::ifstream& ifs, str<native>& str) -> void
 		{
-			   using T = typename codec<local>::unit_t;
-			// using U = typename codec<alien>::unit_t;
+			   typedef typename codec<native>::unit_t T;
+			// typedef typename codec<exotic>::unit_t U;
 
 			T buffer;
 
-			T* dest {str.head()};
-			T* head {str.head()};
+			T* dest {str.__head__()};
+			T* head {str.__head__()};
 
 			while (ifs.read(reinterpret_cast<char*>(&buffer), sizeof(T)))
 			{
@@ -1140,30 +1169,29 @@ namespace x69
 			str.__size__(dest - head);
 		}};
 
-		const std::filesystem::path fs {[&]() noexcept -> decltype(fs)
+		const std::filesystem::path fs {std::invoke([&]
 		{
-			using file_t = decltype(fs);
-			using string = std::string;
+			typedef std::string cstr_t;
+			typedef decltype(fs) file_t;
 
 			// constructible on the fly
 			if constexpr (std::is_constructible_v<file_t, STRING>)
 			{
 				return path;
 			}
+			// at least convertible to cstr_t!
+			else if constexpr (std::is_convertible_v<STRING, cstr_t>)
+			{
+				return static_cast<cstr_t>(path);
+			}
 			// at least convertible to file_t!
 			else if constexpr (std::is_convertible_v<STRING, file_t>)
 			{
 				return static_cast<file_t>(path);
 			}
-			// at least convertible to string!
-			else if constexpr (std::is_convertible_v<STRING, string>)
-			{
-				return static_cast<string>(path);
-			}
 			// ...constexpr failuare! DEAD-END!
 			else static_assert(!"ERROR! call to 'fileof' is ambigious");
-		}
-		()};
+		})};
 
 		if (std::ifstream ifs {fs, std::ios::binary})
 		{
@@ -1252,21 +1280,21 @@ namespace x69
 
 #pragma endregion filesystem
 
-	using str8 = str<"UTF-8">;
-	using str16 = str<"UTF-16">;
-	using str32 = str<"UTF-32">;
+	typedef str<"UTF-8"> str8;
+	typedef str<"UTF-16"> str16;
+	typedef str<"UTF-32"> str32;
 
-	using txt8 = txt<"UTF-8">;
-	using txt16 = txt<"UTF-16">;
-	using txt32 = txt<"UTF-32">;
+	typedef txt<"UTF-8"> txt8;
+	typedef txt<"UTF-16"> txt16;
+	typedef txt<"UTF-32"> txt32;
 
-	template <size_t N> str(const char8_t (&_)[N]) -> str<"UTF-8">;
-	template <size_t N> str(const char16_t (&_)[N]) -> str<"UTF-16">;
-	template <size_t N> str(const char32_t (&_)[N]) -> str<"UTF-32">;
+	template <size_t N> str(const char8_t (&)[N]) -> str<"UTF-8">;
+	template <size_t N> str(const char16_t (&)[N]) -> str<"UTF-16">;
+	template <size_t N> str(const char32_t (&)[N]) -> str<"UTF-32">;
 
-	template <size_t N> txt(const char8_t (&_)[N]) -> txt<"UTF-8">;
-	template <size_t N> txt(const char16_t (&_)[N]) -> txt<"UTF-16">;
-	template <size_t N> txt(const char32_t (&_)[N]) -> txt<"UTF-32">;
+	template <size_t N> txt(const char8_t (&)[N]) -> txt<"UTF-8">;
+	template <size_t N> txt(const char16_t (&)[N]) -> txt<"UTF-16">;
+	template <size_t N> txt(const char32_t (&)[N]) -> txt<"UTF-32">;
 }
 
 // NOLINTBEGIN(unused-includes)
@@ -1274,13 +1302,13 @@ namespace x69
 #include "./private/cable.inl"
 #include "./private/detail.inl"
 
-#include "./private/model/str.inl"
-#include "./private/model/txt.inl"
+#include "./private/str.inl"
+#include "./private/txt.inl"
 
+#include "./private/codec/ASCII.inl"
 #include "./private/codec/UTF8.inl"
 #include "./private/codec/UTF16.inl"
 #include "./private/codec/UTF32.inl"
-#include "./private/codec/ASCII.inl"
 
 // NOLINTEND(unused-includes)
 
@@ -1319,36 +1347,75 @@ inline auto operator<<(std::ostream& os, char32_t code) noexcept -> std::ostream
 	return os.write(out, unit);
 }
 
-template <x69::format_t local, typename alloc> struct std::hash<x69::str<local, alloc>>
+constexpr auto operator ""_str(const char8_t* ptr, size_t len) noexcept -> x69::str8
 {
-	constexpr auto operator()(const x69::str<local, alloc>& str) const noexcept -> size_t
+	return {x69::txt8 {ptr, ptr + len}};
+}
+
+constexpr auto operator ""_txt(const char8_t* ptr, size_t len) noexcept -> x69::txt8
+{
+	return {ptr, ptr + len};
+}
+
+constexpr auto operator ""_str(const char16_t* ptr, size_t len) noexcept -> x69::str16
+{
+	return {x69::txt16 {ptr, ptr + len}};
+}
+
+constexpr auto operator ""_txt(const char16_t* ptr, size_t len) noexcept -> x69::txt16
+{
+	return {ptr, ptr + len};
+}
+
+constexpr auto operator ""_str(const char32_t* ptr, size_t len) noexcept -> x69::str32
+{
+	return {x69::txt32 {ptr, ptr + len}};
+}
+
+constexpr auto operator ""_txt(const char32_t* ptr, size_t len) noexcept -> x69::txt32
+{
+	return {ptr, ptr + len};
+}
+
+template <x69::format_t native,
+          /*&*/template <class>
+          /*&*/typename malloc> struct std::hash<x69::str<native,
+                                                          malloc>>
+{
+	constexpr auto operator()(const x69::str<native,
+                                             malloc>& str) const noexcept -> size_t
 	{
-		uint32_t seed {0};
+		int seed {0};
 
 		for (const auto code : str)
 		{
 			seed = 31 * seed + code;
 		}
-		return static_cast<size_t>(seed);
+
+		return seed;
 	}
 };
 
-template <x69::format_t local /* can't own */> struct std::hash<x69::txt<local  /*&*/>>
+template <x69::format_t native> struct std::hash<x69::txt<native>>
 {
-	constexpr auto operator()(const x69::txt<local  /*&*/>& str) const noexcept -> size_t
+	constexpr auto operator()(const x69::txt<native>& str) const noexcept -> size_t
 	{
-		uint32_t seed {0};
+		int seed {0};
 
 		for (const auto code : str)
 		{
 			seed = 31 * seed + code;
 		}
-		return static_cast<size_t>(seed);
+
+		return seed;
 	}
 };
 
-template <x69::format_t local, typename alloc>
-inline constexpr bool std::ranges::disable_sized_range<x69::str<local, alloc>> = true;
+template <x69::format_t native,
+          /*&*/template <class>
+          /*&*/typename malloc>
+inline constexpr bool std::ranges::disable_sized_range<x69::str<native,
+                                                                malloc>> = true;
 
-template <x69::format_t local /* can't own */>
-inline constexpr bool std::ranges::disable_sized_range<x69::txt<local  /*&*/>> = true;
+template <x69::format_t native>
+inline constexpr bool std::ranges::disable_sized_range<x69::txt<native>> = true;

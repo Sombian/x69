@@ -1,8 +1,8 @@
 #pragma once
 
-//=====================//
-#include "x69/string.hpp"
-//=====================//
+//=======================//
+#include "../../str.hpp" //
+//=======================//
 
 namespace x69
 {
@@ -76,6 +76,7 @@ namespace x69
 		int8_t i {-1};
 		// until start byte sequence is found...
 		for (; (data[i] >> 0xA) == 0x37; --i) {}
+
 		return i;
 	}
 
@@ -95,14 +96,16 @@ namespace x69
 			}
 			case +2:
 			{
-				const char32_t code {in - 0x10000};
+				const auto code {in - 0x10000};
+
 				out[+0] = 0xD800 | (code / 0x400);
 				out[+1] = 0xDC00 | (code & 0x3FF);
 				break;
 			}
 			case -2:
 			{
-				const char32_t code {in - 0x10000};
+				const auto code {in - 0x10000};
+
 				out[-2] = 0xD800 | (code / 0x400);
 				out[-1] = 0xDC00 | (code & 0x3FF);
 				break;

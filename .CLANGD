@@ -1,8 +1,10 @@
+CompileFlags:
+    Add: ["-std=c++23"]
+
 InlayHints:
     Designators: Off
     DeducedTypes: Off
     ParameterNames: Off
 
-Diagnostics:
-    UnusedIncludes: Strict
-    MissingIncludes: Strict
+Documentation:
+    CommentFormat: Markdown

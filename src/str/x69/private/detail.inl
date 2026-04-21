@@ -1,23 +1,23 @@
 #pragma once
 
-//=====================//
-#include "x69/string.hpp"
-//=====================//
+//====================//
+#include "../str.hpp" //
+//====================//
 
 namespace x69
 {
 	template <format_t source> constexpr auto detail::__units__(const typename codec<source>::unit_t* head, const typename codec<source>::unit_t* tail) noexcept -> size_t
 	{
-		   using T = typename codec<source>::unit_t;
-		// using U = typename codec<target>::unit_t;
+		   typedef typename codec<source>::unit_t T;
+		// typedef typename codec<target>::unit_t U;
 
 		return tail - head;
 	}
 
 	template <format_t source> constexpr auto detail::__codes__(const typename codec<source>::unit_t* head, const typename codec<source>::unit_t* tail) noexcept -> size_t
 	{
-		   using T = typename codec<source>::unit_t;
-		// using U = typename codec<target>::unit_t;
+		   typedef typename codec<source>::unit_t T;
+		// typedef typename codec<target>::unit_t U;
 
 		if constexpr (!codec<source>::is_variable)
 		{
@@ -44,8 +44,8 @@ namespace x69
 	                                                            const typename codec<source>::unit_t* head,
 	                                                            const typename codec<source>::unit_t* tail) noexcept -> size_t
 	{
-		using T = typename codec<source>::unit_t;
-		using U = typename codec<target>::unit_t;
+		typedef typename codec<source>::unit_t T;
+		typedef typename codec<target>::unit_t U;
 
 		if constexpr (source == target)
 		{
@@ -81,8 +81,8 @@ namespace x69
 	template <format_t target> constexpr auto detail::__fcopy__(/*&*/ typename codec<target>::unit_t* dest,
 	                                                            code_t                                code) noexcept -> size_t
 	{
-		// using T = typename codec<source>::unit_t;
-		   using U = typename codec<target>::unit_t;
+		// typedef typename codec<source>::unit_t T;
+		   typedef typename codec<target>::unit_t U;
 
 		const auto step {codec<target>::size(code)};
 		codec<target>::encode(code, dest, step);
@@ -95,8 +95,8 @@ namespace x69
 	                                                            const typename codec<source>::unit_t* head,
 	                                                            const typename codec<source>::unit_t* tail) noexcept -> size_t
 	{
-		using T = typename codec<source>::unit_t;
-		using U = typename codec<target>::unit_t;
+		typedef typename codec<source>::unit_t T;
+		typedef typename codec<target>::unit_t U;
 
 		if constexpr (source == target)
 		{
@@ -144,8 +144,8 @@ namespace x69
 	template <format_t target> constexpr auto detail::__rcopy__(/*&*/ typename codec<target>::unit_t* dest,
 	                                                            code_t                                code) noexcept -> size_t
 	{
-		// using T = typename codec<source>::unit_t;
-		   using U = typename codec<target>::unit_t;
+		// typedef typename codec<source>::unit_t T;
+		   typedef typename codec<target>::unit_t U;
 
 		const auto step {codec<target>::size(code)};
 		codec<target>::encode(code, dest, step);
@@ -157,8 +157,8 @@ namespace x69
 	          format_t target> constexpr auto detail::__equal__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
 	                                                            const typename codec<target>::unit_t* rhs0, const typename codec<target>::unit_t* rhsN) noexcept -> bool
 	{
-		using T = typename codec<source>::unit_t;
-		using U = typename codec<target>::unit_t;
+		typedef typename codec<source>::unit_t T;
+		typedef typename codec<target>::unit_t U;
 
 		if constexpr (source == target)
 		{
@@ -208,8 +208,8 @@ namespace x69
 	template <format_t source> constexpr auto detail::__equal__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
 	                                                            code_t                                                                            code) noexcept -> bool
 	{
-		   using T = typename codec<source>::unit_t;
-		// using U = typename codec<target>::unit_t;
+		   typedef typename codec<source>::unit_t T;
+		// typedef typename codec<target>::unit_t U;
 
 		if (detail::__units__<source>(lhs0, lhsN) != 1) return false;
 
@@ -224,8 +224,8 @@ namespace x69
 	          format_t target> constexpr auto detail::__nqual__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
 	                                                            const typename codec<target>::unit_t* rhs0, const typename codec<target>::unit_t* rhsN) noexcept -> bool
 	{
-		using T = typename codec<source>::unit_t;
-		using U = typename codec<target>::unit_t;
+		typedef typename codec<source>::unit_t T;
+		typedef typename codec<target>::unit_t U;
 
 		if constexpr (source == target)
 		{
@@ -275,8 +275,8 @@ namespace x69
 	template <format_t source> constexpr auto detail::__nqual__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
 	                                                            code_t                                                                            code) noexcept -> bool
 	{
-		   using T = typename codec<source>::unit_t;
-		// using U = typename codec<target>::unit_t;
+		   typedef typename codec<source>::unit_t T;
+		// typedef typename codec<target>::unit_t U;
 
 		if (detail::__units__<source>(lhs0, lhsN) != 1) return true;
 
@@ -291,8 +291,8 @@ namespace x69
 	          format_t target> constexpr auto detail::__split__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
 	                                                            const typename codec<target>::unit_t* rhs0, const typename codec<target>::unit_t* rhsN) noexcept -> std::vector<txt<source>>
 	{
-		using T = typename codec<source>::unit_t;
-		using U = typename codec<target>::unit_t;
+		typedef typename codec<source>::unit_t T;
+		typedef typename codec<target>::unit_t U;
 
 		std::vector<txt<source>> out;
 
@@ -322,8 +322,8 @@ namespace x69
 	template <format_t source> constexpr auto detail::__split__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
 	                                                            code_t                                                                            code) noexcept -> std::vector<txt<source>>
 	{
-		   using T = typename codec<source>::unit_t;
-		// using U = typename codec<target>::unit_t;
+		   typedef typename codec<source>::unit_t T;
+		// typedef typename codec<target>::unit_t U;
 
 		std::vector<txt<source>> out;
 
@@ -352,8 +352,8 @@ namespace x69
 	          format_t target> constexpr auto detail::__match__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
 	                                                            const typename codec<target>::unit_t* rhs0, const typename codec<target>::unit_t* rhsN) noexcept -> std::vector<txt<source>>
 	{
-		using T = typename codec<source>::unit_t;
-		using U = typename codec<target>::unit_t;
+		typedef typename codec<source>::unit_t T;
+		typedef typename codec<target>::unit_t U;
 
 		std::vector<txt<source>> out;
 
@@ -379,8 +379,8 @@ namespace x69
 	template <format_t source> constexpr auto detail::__match__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
 	                                                            code_t                                                                            code) noexcept -> std::vector<txt<source>>
 	{
-		   using T = typename codec<source>::unit_t;
-		// using U = typename codec<target>::unit_t;
+		   typedef typename codec<source>::unit_t T;
+		// typedef typename codec<target>::unit_t U;
 
 		std::vector<txt<source>> out;
 
@@ -409,8 +409,8 @@ namespace x69
 	          format_t target> constexpr auto detail::__holds__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
 	                                                            const typename codec<target>::unit_t* rhs0, const typename codec<target>::unit_t* rhsN) noexcept -> bool
 	{
-		using T = typename codec<source>::unit_t;
-		using U = typename codec<target>::unit_t;
+		typedef typename codec<source>::unit_t T;
+		typedef typename codec<target>::unit_t U;
 
 		try
 		{
@@ -430,8 +430,8 @@ namespace x69
 	template <format_t source> constexpr auto detail::__holds__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
 	                                                            code_t                                                                            code) noexcept -> bool
 	{
-		   using T = typename codec<source>::unit_t;
-		// using U = typename codec<target>::unit_t;
+		   typedef typename codec<source>::unit_t T;
+		// typedef typename codec<target>::unit_t U;
 
 		const T* dest {lhs0};
 		const T* tail {lhs0};
@@ -454,8 +454,8 @@ namespace x69
 	          format_t target> constexpr auto detail::__swith__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
 	                                                            const typename codec<target>::unit_t* rhs0, const typename codec<target>::unit_t* rhsN) noexcept -> bool
 	{
-		using T = typename codec<source>::unit_t;
-		using U = typename codec<target>::unit_t;
+		typedef typename codec<source>::unit_t T;
+		typedef typename codec<target>::unit_t U;
 
 		if constexpr (source == target)
 		{
@@ -506,8 +506,8 @@ namespace x69
 	template <format_t source> constexpr auto detail::__swith__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
 	                                                            code_t                                                                            code) noexcept -> bool
 	{
-		   using T = typename codec<source>::unit_t;
-		// using U = typename codec<target>::unit_t;
+		   typedef typename codec<source>::unit_t T;
+		// typedef typename codec<target>::unit_t U;
 
 		if (detail::__units__<source>(lhs0, lhsN) < 1) return false;
 
@@ -522,8 +522,8 @@ namespace x69
 	          format_t target> constexpr auto detail::__ewith__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
 	                                                            const typename codec<target>::unit_t* rhs0, const typename codec<target>::unit_t* rhsN) noexcept -> bool
 	{
-		using T = typename codec<source>::unit_t;
-		using U = typename codec<target>::unit_t;
+		typedef typename codec<source>::unit_t T;
+		typedef typename codec<target>::unit_t U;
 
 		if constexpr (source == target)
 		{
@@ -574,8 +574,8 @@ namespace x69
 	template <format_t source> constexpr auto detail::__ewith__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
 	                                                            code_t                                                                            code) noexcept -> bool
 	{
-		   using T = typename codec<source>::unit_t;
-		// using U = typename codec<target>::unit_t;
+		   typedef typename codec<source>::unit_t T;
+		// typedef typename codec<target>::unit_t U;
 
 		if (detail::__units__<source>(lhs0, lhsN) < 1) return false;
 
@@ -589,8 +589,8 @@ namespace x69
 	template <format_t source> constexpr auto detail::__substr__(const typename codec<source>::unit_t* head, const typename codec<source>::unit_t* tail,
 	                                                             clamp                                 from, clamp                                 dest) noexcept -> txt<source>
 	{
-		   using T = typename codec<source>::unit_t;
-		// using U = typename codec<target>::unit_t;
+		   typedef typename codec<source>::unit_t T;
+		// typedef typename codec<target>::unit_t U;
 
 		// e.g. str.substr(N - 1, N - 0);
 
@@ -612,8 +612,8 @@ namespace x69
 	template <format_t source> constexpr auto detail::__substr__(const typename codec<source>::unit_t* head, const typename codec<source>::unit_t* tail,
 	                                                             clamp                                 from, range                                 dest) noexcept -> txt<source>
 	{
-		   using T = typename codec<source>::unit_t;
-		// using U = typename codec<target>::unit_t;
+		   typedef typename codec<source>::unit_t T;
+		// typedef typename codec<target>::unit_t U;
 
 		// e.g. str.substr(N - 1, N);
 
@@ -632,8 +632,8 @@ namespace x69
 	template <format_t source> constexpr auto detail::__substr__(const typename codec<source>::unit_t* head, const typename codec<source>::unit_t* tail,
 	                                                             size_t                                from, clamp                                 dest) noexcept -> txt<source>
 	{
-		   using T = typename codec<source>::unit_t;
-		// using U = typename codec<target>::unit_t;
+		   typedef typename codec<source>::unit_t T;
+		// typedef typename codec<target>::unit_t U;
 
 		// e.g. str.substr(0, N - 1);
 
@@ -654,8 +654,8 @@ namespace x69
 	template <format_t source> constexpr auto detail::__substr__(const typename codec<source>::unit_t* head, const typename codec<source>::unit_t* tail,
 	                                                             size_t                                from, range                                 dest) noexcept -> txt<source>
 	{
-		   using T = typename codec<source>::unit_t;
-		// using U = typename codec<target>::unit_t;
+		   typedef typename codec<source>::unit_t T;
+		// typedef typename codec<target>::unit_t U;
 
 		// e.g. str.substr(0, N);
 
@@ -674,8 +674,8 @@ namespace x69
 	template <format_t source> constexpr auto detail::__substr__(const typename codec<source>::unit_t* head, const typename codec<source>::unit_t* tail,
 	                                                             size_t                                from, size_t                                dest) noexcept -> txt<source>
 	{
-		   using T = typename codec<source>::unit_t;
-		// using U = typename codec<target>::unit_t;
+		   typedef typename codec<source>::unit_t T;
+		// typedef typename codec<target>::unit_t U;
 
 		// e.g. str.substr(6, 9);
 
@@ -700,8 +700,8 @@ namespace x69
 	                                                             const typename codec<target>::unit_t* rhs0, const typename codec<target>::unit_t* rhsN,
 	                                                             const auto& /* (const source::unit_t* head, const source::unit_t* tail) -> VOID */ fun) noexcept -> void
 	{
-		using T = typename codec<source>::unit_t;
-		using U = typename codec<target>::unit_t;
+		typedef typename codec<source>::unit_t T;
+		typedef typename codec<target>::unit_t U;
 
 		if constexpr (source == target)
 		{

@@ -1,8 +1,8 @@
 #pragma once
 
-//=====================//
-#include "x69/string.hpp"
-//=====================//
+//=======================//
+#include "../../str.hpp" //
+//=======================//
 
 namespace x69
 {
@@ -49,6 +49,7 @@ namespace x69
 		int8_t i {-1};
 		// until start byte sequence is found...
 		for (; (data[i] & 0xC0) == 0x80; --i) {}
+
 		return i;
 	}
 
