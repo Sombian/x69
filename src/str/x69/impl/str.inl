@@ -643,7 +643,7 @@ template <typename F, typeᵐᵉᵐˀ A> template <x69::usize N> template <char 
 					//          [0 > rhs]
 					//          [0 < rhs]
 
-					off = off + dirᵖᵗʳ;
+					off = off + dirᵖᵗʳ
 					          - dirʳʰˢ;
 				}
 			}

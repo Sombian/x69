@@ -11,6 +11,22 @@ static int WindowsConsoleSubSystem {[]
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #ifndef DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
+const char dir[] {"./test/str/utf8std.txt"};
+
+using namespace x69;
+
+int main() noexcept
+{
+	if (auto _ {fileof(dir)})
+	{
+		std::visit([](auto _)
+		{
+			std::cout << _;
+		},
+		std::move(_.value()));
+	}
+}
+
 #endif //CLOSE_CONFIG_IMPLEMENT_WITH_MAIN
 #ifdef DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
@@ -102,7 +118,7 @@ TEST_CASE("alias")
 	             u"우울계_𝕏친소 우울계_트친소");
 }
 
-TEST_CASE("range")
+TEST_CASE("shift")
 {
 	x69::str str {u8"우울계_𝕏친소 우울계_트친소"
 	              u8"정병계_𝕏친소 정병계_트친소"};
