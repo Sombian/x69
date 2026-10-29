@@ -287,7 +287,7 @@ namespace x69
 				//           | 0 0 0 |           | 1 1 1 |           | 0 0 0 |
 				//           | 0 0 0 |           | 0 0 0 |           | 1 1 1 |
 				// ```
-				static constexpr auto ROWⁿ {[]
+				static constexpr auto ROWᴺ {[]
 				{
 					std::array<WORD, N> out {0};
 
@@ -310,7 +310,7 @@ namespace x69
 				//           | 0 1 1 |           | 1 0 1 |           | 1 1 0 |
 				//           | 0 1 1 |           | 1 0 1 |           | 1 1 0 |
 				// ```
-				static constexpr auto COLⁿ {[]
+				static constexpr auto COLᴺ {[]
 				{
 					std::array<WORD, N> out {0};
 
@@ -356,12 +356,12 @@ namespace x69
 
 			template <typename... Tᴺ> class concat
 			{
-				template <typename T> using lifeTM = std::conditional_t // lval := ref
+				template <typename T> using lifeᵀᴹ = std::conditional_t // lval := ref
 				<                                                       // rval := val
 					std::is_lvalue_reference_v<T>, const std::remove_cvref_t<T>&,
 					                               /*&*/ std::remove_cvref_t<T>>;
 
-				std::tuple<lifeTM<Tᴺ>...> args;
+				std::tuple<lifeᵀᴹ<Tᴺ>...> args;
 
 				template <char S>        class handle;
 				template <char S> friend class handle;
@@ -374,7 +374,7 @@ namespace x69
 				friend _; // {🔓}
 				constexpr concat
 				(
-					lifeTM<Tᴺ>... _args
+					lifeᵀᴹ<Tᴺ>... _args
 				)
 				noexcept : args {_args...} {};
 

@@ -4,4 +4,6 @@ out/
 .cache/
 .vs/
 
+.zed/debug.json
+
 compile_commands.json

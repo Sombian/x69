@@ -422,9 +422,9 @@ template <typename _, typename F> template <x69::usize N> constexpr auto x69::AP
 				if (top == rhs)
 				{
 					// write := {ROW}
-					map |= ROWⁿ[NTH];
+					map |= ROWᴺ[NTH];
 					// clear := {COL}
-					map &= COLⁿ[NTH];
+					map &= COLᴺ[NTH];
 
 					return {ptr};
 				}
@@ -492,9 +492,9 @@ template <typename _, typename F> template <x69::usize N> constexpr auto x69::AP
 						.off {(0)},
 					};
 					// write := {ROW}
-					map |= ROWⁿ[LRU];
+					map |= ROWᴺ[LRU];
 					// clear := {COL}
-					map &= COLⁿ[LRU];
+					map &= COLᴺ[LRU];
 
 					return {nullptr};
 				}
@@ -524,9 +524,9 @@ template <typename _, typename F> template <x69::usize N> constexpr auto x69::AP
 					.off {(0)},
 				};
 				// write := {ROW}
-				map |= ROWⁿ[LRU];
+				map |= ROWᴺ[LRU];
 				// clear := {COL}
-				map &= COLⁿ[LRU];
+				map &= COLᴺ[LRU];
 
 				return {nullptr};
 			}
@@ -540,9 +540,9 @@ template <typename _, typename F> template <x69::usize N> constexpr auto x69::AP
 		.off {ptr - beg},
 	};
 	// write := {ROW}
-	map |= ROWⁿ[LRU];
+	map |= ROWᴺ[LRU];
 	// clear := {COL}
-	map &= COLⁿ[LRU];
+	map &= COLᴺ[LRU];
 
 	return {ptr};
 }
@@ -588,9 +588,9 @@ template <typename _, typename F> template <x69::usize N> constexpr auto x69::AP
 				if (top == rhs)
 				{
 					// write := {ROW}
-					map |= ROWⁿ[NTH];
+					map |= ROWᴺ[NTH];
 					// clear := {COL}
-					map &= COLⁿ[NTH];
+					map &= COLᴺ[NTH];
 
 					return {ptr};
 				}
@@ -658,9 +658,9 @@ template <typename _, typename F> template <x69::usize N> constexpr auto x69::AP
 						.off {(0)},
 					};
 					// write := {ROW}
-					map |= ROWⁿ[LRU];
+					map |= ROWᴺ[LRU];
 					// clear := {COL}
-					map &= COLⁿ[LRU];
+					map &= COLᴺ[LRU];
 
 					return {nullptr};
 				}
@@ -690,9 +690,9 @@ template <typename _, typename F> template <x69::usize N> constexpr auto x69::AP
 					.off {(0)},
 				};
 				// write := {ROW}
-				map |= ROWⁿ[LRU];
+				map |= ROWᴺ[LRU];
 				// clear := {COL}
-				map &= COLⁿ[LRU];
+				map &= COLᴺ[LRU];
 
 				return {nullptr};
 			}
@@ -706,9 +706,9 @@ template <typename _, typename F> template <x69::usize N> constexpr auto x69::AP
 		.off {end - ptr},
 	};
 	// write := {ROW}
-	map |= ROWⁿ[LRU];
+	map |= ROWᴺ[LRU];
 	// clear := {COL}
-	map &= COLⁿ[LRU];
+	map &= COLᴺ[LRU];
 
 	return {ptr};
 }
