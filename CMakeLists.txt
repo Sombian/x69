@@ -24,7 +24,7 @@ set(CMAKE_CXX_USE_RESPONSE_FILE_FOR_OBJECTS 0)
 set(CMAKE_C_USE_RESPONSE_FILE_FOR_INCLUDES 0)
 set(CMAKE_CXX_USE_RESPONSE_FILE_FOR_INCLUDES 0)
 
-add_compile_options("$<$<BUILD_INTERFACE:$<CXX_COMPILER_ID:MSVC>>:/utf-8;/MT;/Wall;/permissive-;/fsanitize=address>"
+add_compile_options("$<$<BUILD_INTERFACE:$<CXX_COMPILER_ID:MSVC>>:/utf-8;/Wall;/permissive-;/fsanitize=address>"
                     "$<$<BUILD_INTERFACE:$<CXX_COMPILER_ID:GNU>>:-g;-Wall;-Wextra;-Wpedantic;-Wcast-align;-Wshadow>"
                     "$<$<BUILD_INTERFACE:$<CXX_COMPILER_ID:Clang>>:-g;-Wall;-Wextra;-Wpedantic;-Wcast-align;-Wshadow>")
 

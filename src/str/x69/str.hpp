@@ -356,12 +356,12 @@ namespace x69
 
 			template <typename... Tᴺ> class concat
 			{
-				template <typename T> using upcast = std::conditional_t // lval := ref
+				template <typename T> using lifeTM = std::conditional_t // lval := ref
 				<                                                       // rval := val
 					std::is_lvalue_reference_v<T>, const std::remove_cvref_t<T>&,
 					                               /*&*/ std::remove_cvref_t<T>>;
 
-				std::tuple<upcast<Tᴺ>...> args;
+				std::tuple<lifeTM<Tᴺ>...> args;
 
 				template <char S>        class handle;
 				template <char S> friend class handle;
@@ -374,7 +374,7 @@ namespace x69
 				friend _; // {🔓}
 				constexpr concat
 				(
-					upcast<Tᴺ>... _args
+					lifeTM<Tᴺ>... _args
 				)
 				noexcept : args {_args...} {};
 

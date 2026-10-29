@@ -42,30 +42,30 @@ template <typename _, typename F> constexpr auto x69::API::cstr<_, F>::length() 
 
 template <typename _, typename F> constexpr auto x69::API::cstr<_, F>::starts_w(auto&& inˀ) const noexcept -> bool requires requires { txt {inˀ}; }
 {
-	return [this]<typename Fˀ>(txt<Fˀ> txtˀ)
+	return [this]<typename Fˀ>(txt<Fˀ> inˀ)
 	{
-		return detail::swith<F, Fˀ>(     _head(),      _tail(),
-		                            txtˀ._head(), txtˀ._tail());
+		return detail::swith<F, Fˀ>(    _head(),     _tail(),
+		                            inˀ._head(), inˀ._tail());
 	}
 	(txt {inˀ});
 }
 
 template <typename _, typename F> constexpr auto x69::API::cstr<_, F>::contains(auto&& inˀ) const noexcept -> bool requires requires { txt {inˀ}; }
 {
-	return [this]<typename Fˀ>(txt<Fˀ> txtˀ)
+	return [this]<typename Fˀ>(txt<Fˀ> inˀ)
 	{
-		return detail::holds<F, Fˀ>(     _head(),      _tail(),
-		                            txtˀ._head(), txtˀ._tail());
+		return detail::holds<F, Fˀ>(    _head(),     _tail(),
+		                            inˀ._head(), inˀ._tail());
 	}
 	(txt {inˀ});
 }
 
 template <typename _, typename F> constexpr auto x69::API::cstr<_, F>::ends_w(auto&& inˀ) const noexcept -> bool requires requires { txt {inˀ}; }
 {
-	return [this]<typename Fˀ>(txt<Fˀ> txtˀ)
+	return [this]<typename Fˀ>(txt<Fˀ> inˀ)
 	{
-		return detail::ewith<F, Fˀ>(     _head(),      _tail(),
-		                            txtˀ._head(), txtˀ._tail());
+		return detail::ewith<F, Fˀ>(    _head(),     _tail(),
+		                            inˀ._head(), inˀ._tail());
 	}
 	(txt {inˀ});
 }
@@ -142,40 +142,40 @@ template <typename _, typename F> constexpr auto x69::API::cstr<_, F>::operator[
 
 template <typename _, typename F> constexpr auto x69::API::cstr<_, F>::split(auto&& inˀ) const noexcept -> std::vector<txt<F>> requires requires { txt {inˀ}; }
 {
-	return [this]<typename Fˀ>(txt<Fˀ> txtˀ)
+	return [this]<typename Fˀ>(txt<Fˀ> inˀ)
 	{
-		return detail::split<F, Fˀ>(     _head(),      _tail(),
-		                            txtˀ._head(), txtˀ._tail());
+		return detail::split<F, Fˀ>(    _head(),     _tail(),
+		                            inˀ._head(), inˀ._tail());
 	}
 	(txt {inˀ});
 }
 
 template <typename _, typename F> constexpr auto x69::API::cstr<_, F>::match(auto&& inˀ) const noexcept -> std::vector<txt<F>> requires requires { txt {inˀ}; }
 {
-	return [this]<typename Fˀ>(txt<Fˀ> txtˀ)
+	return [this]<typename Fˀ>(txt<Fˀ> inˀ)
 	{
-		return detail::match<F, Fˀ>(     _head(),      _tail(),
-		                            txtˀ._head(), txtˀ._tail());
+		return detail::match<F, Fˀ>(    _head(),     _tail(),
+		                            inˀ._head(), inˀ._tail());
 	}
 	(txt {inˀ});
 }
 
 template <typename _, typename F> constexpr auto x69::API::cstr<_, F>::operator==(auto&& rhs) const noexcept -> bool requires requires { txt {rhs}; }
 {
-	return [this]<typename Fˀ>(txt<Fˀ> txtˀ)
+	return [this]<typename Fˀ>(txt<Fˀ> inˀ)
 	{
-		return detail::equal<F, Fˀ>(     _head(),      _tail(),
-		                            txtˀ._head(), txtˀ._tail());
+		return detail::equal<F, Fˀ>(    _head(),     _tail(),
+		                            inˀ._head(), inˀ._tail());
 	}
 	(txt {rhs});
 }
 
 template <typename _, typename F> constexpr auto x69::API::cstr<_, F>::operator!=(auto&& rhs) const noexcept -> bool requires requires { txt {rhs}; }
 {
-	return [this]<typename Fˀ>(txt<Fˀ> txtˀ)
+	return [this]<typename Fˀ>(txt<Fˀ> inˀ)
 	{
-		return !detail::equal<F, Fˀ>(     _head(),      _tail(),
-		                             txtˀ._head(), txtˀ._tail());
+		return !detail::equal<F, Fˀ>(    _head(),     _tail(),
+		                             inˀ._head(), inˀ._tail());
 	}
 	(txt {rhs});
 }
@@ -754,7 +754,7 @@ template <typename _, typename F> template <typename... Tᴺ> template <typename
 	args);
 
 	// just enough fit
-	out.space(size);
+	out.spare(size);
 	out._SSOᴺ(size);
 
 	typename Fˀ::codeᵘᵗ* dest {out._head()};

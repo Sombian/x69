@@ -72,18 +72,18 @@ constexpr auto x69::UTF_16::decode(const codeᵘᵗ* in, codeᵖᵗ& out, stride
 		case +2:
 		{
 			out = 0x10000 // supplymentary
-			      |
+			      +
 			      ((in[+0] - 0xD800) << 10)
-			      |
+			      +
 			      ((in[+1] - 0xDC00) << 00);
 			break;
 		}
 		case -2:
 		{
 			out = 0x10000 // supplymentary
-			      |
+			      +
 			      ((in[-2] - 0xD800) << 10)
-			      |
+			      +
 			      ((in[-1] - 0xDC00) << 00);
 			break;
 		}

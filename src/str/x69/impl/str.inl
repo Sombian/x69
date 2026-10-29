@@ -34,7 +34,7 @@ template <typename F, typeᵐᵉᵐˀ A> constexpr x69::str<F, A>::str::~str() n
 	}
 }
 
-template <typename F, typeᵐᵉᵐˀ A> constexpr x69::str<F, A>::str(const str& lval) noexcept
+template <typename F, typeᵐᵉᵐˀ A> constexpr x69::str<F, A>::str(const str& lval) noexcept : str()
 {
 	if (this == &lval) [[unlikely]] return;
 
@@ -45,7 +45,7 @@ template <typename F, typeᵐᵉᵐˀ A> constexpr x69::str<F, A>::str(const str
 	                            lval._tail());
 }
 
-template <typename F, typeᵐᵉᵐˀ A> constexpr x69::str<F, A>::str(/*&*/ str&& rval) noexcept
+template <typename F, typeᵐᵉᵐˀ A> constexpr x69::str<F, A>::str(/*&*/ str&& rval) noexcept : str()
 {
 	if (this == &rval) [[unlikely]] return;
 
@@ -118,16 +118,42 @@ template <typename F, typeᵐᵉᵐˀ A> template <x69::usize N> constexpr auto 
 
 template <typename F, typeᵐᵉᵐˀ A> constexpr auto x69::str<F, A>::operator=(auto&& rhs)& noexcept -> str& requires requires { txt {rhs}; }
 {
-	[this]<typename Fˣ>(txt<Fˣ> in)
+	[this]<typename Fˀ>(txt<Fˀ> inˀ)
 	{
-		const auto rhsL {detail::ΔCU<F, Fˣ>(in.head,
-		                                    in.tail)};
+		const auto commit = [this](const typename Fˀ::codeᵘᵗ* rhs0,
+		                           const typename Fˀ::codeᵘᵗ* rhsN)
+		{
+			const auto rhsL {detail::ΔCU<F, Fˀ>(rhs0,
+			                                    rhsN)};
 
-		spare(rhsL);
-		_SSOᴺ(rhsL);
+			spare(rhsL);
 
-		detail::copy<F, Fˣ>(_head(), in.head,
-		                             in.tail);
+			detail::copy<F, Fˀ>(_head(), rhs0,
+			                             rhsN);
+
+			_SSOᴺ(rhsL);
+		};
+
+		if constexpr (std::is_same_v<F, Fˀ>)
+		{
+			if (_head() <= inˀ.head && inˀ.head <= _tail())
+			{
+				const str tmp {inˀ};
+
+				commit(tmp._head(),
+				       tmp._tail());
+			}
+			else [[likely]] // RHS is not a substr of LHS
+			{
+				commit(inˀ.head,
+				       inˀ.tail);
+			}
+		}
+		if constexpr (!std::is_same_v<F, Fˀ>)
+		{
+			commit(inˀ.head,
+			       inˀ.tail);
+		}
 	}
 	(txt {rhs});
 
@@ -136,37 +162,50 @@ template <typename F, typeᵐᵉᵐˀ A> constexpr auto x69::str<F, A>::operator
 
 template <typename F, typeᵐᵉᵐˀ A> constexpr auto x69::str<F, A>::operator=(auto&& rhs)&& noexcept -> str&& requires requires { txt {rhs}; }
 {
-	[this]<typename Fˣ>(txt<Fˣ> in)
-	{
-		const auto rhsL {detail::ΔCU<F, Fˣ>(in.head,
-		                                    in.tail)};
-
-		spare(rhsL);
-		_SSOᴺ(rhsL);
-
-		detail::copy<F, Fˣ>(_head(), in.head,
-		                             in.tail);
-	}
-	(txt {rhs});
+	// delegate to lvalue ver. oper
+	static_cast<str&>(*this) = rhs;
 
 	return *this;
 }
 
 template <typename F, typeᵐᵉᵐˀ A> constexpr auto x69::str<F, A>::operator+=(auto&& rhs)& noexcept -> str& requires requires { txt {rhs}; }
 {
-	[this]<typename Fˣ>(txt<Fˣ> in)
+	[this]<typename Fˀ>(txt<Fˀ> inˀ)
 	{
-		const auto lhsL {detail::ΔCU<F, F>(_head(),
-		                                   _tail())};
+		const auto commit = [this](const typename Fˀ::codeᵘᵗ* rhs0,
+		                           const typename Fˀ::codeᵘᵗ* rhsN)
+		{
+			const auto sumL {super::size() + detail::ΔCU<F, Fˀ>(rhs0,
+			                                                    rhsN)};
 
-		const auto rhsL {detail::ΔCU<F, Fˣ>(in.head,
-		                                    in.tail)};
+			spare(sumL);
 
-		spare(lhsL + rhsL);
-		_SSOᴺ(lhsL + rhsL);
+			detail::copy<F, Fˀ>(_tail(), rhs0,
+			                             rhsN);
 
-		detail::copy<F, Fˣ>(_tail(), in.head,
-		                             in.tail);
+			_SSOᴺ(sumL);
+		};
+
+		if constexpr (std::is_same_v<F, Fˀ>)
+		{
+			if (_head() <= inˀ.head && inˀ.head <= _tail())
+			{
+				const str tmp {inˀ};
+
+				commit(tmp._head(),
+				       tmp._tail());
+			}
+			else [[likely]] // RHS is not a substr of LHS
+			{
+				commit(inˀ.head,
+				       inˀ.tail);
+			}
+		}
+		if constexpr (!std::is_same_v<F, Fˀ>)
+		{
+			commit(inˀ.head,
+			       inˀ.tail);
+		}
 	}
 	(txt {rhs});
 
@@ -175,21 +214,8 @@ template <typename F, typeᵐᵉᵐˀ A> constexpr auto x69::str<F, A>::operator
 
 template <typename F, typeᵐᵉᵐˀ A> constexpr auto x69::str<F, A>::operator+=(auto&& rhs)&& noexcept -> str&& requires requires { txt {rhs}; }
 {
-	[this]<typename Fˣ>(txt<Fˣ> in)
-	{
-		const auto lhsL {detail::ΔCU<F, F>(_head(),
-		                                   _tail())};
-
-		const auto rhsL {detail::ΔCU<F, Fˣ>(in.head,
-		                                    in.tail)};
-
-		spare(lhsL + rhsL);
-		_SSOᴺ(lhsL + rhsL);
-
-		detail::copy<F, Fˣ>(_tail(), in.head,
-		                             in.tail);
-	}
-	(txt {rhs});
+	// delegate to lvalue ver. oper
+	static_cast<str&>(*this) += rhs;
 
 	return *this;
 }
@@ -445,9 +471,12 @@ template <typename F, typeᵐᵉᵐˀ A> template <char S> constexpr auto x69::s
 		// const_cast is safe in this context
 		unit*& out {const_cast<unit*&>(ptr)};
 
-		if (dirᵖᵗʳ - dirʳʰˢ != 0)
+		if (dirᵖᵗʳ - dirʳʰˢ != 0) [[likely]]
 		{
 			detail::copy<F, F>(out + dirʳʰˢ, out + dirᵖᵗʳ, end);
+
+			src->_SSOᴺ(src->size() - dirᵖᵗʳ
+			                       + dirʳʰˢ);
 		}
 		F::encode(rhs, out, dirʳʰˢ);
 
@@ -507,9 +536,12 @@ template <typename F, typeᵐᵉᵐˀ A> template <char S> constexpr auto x69::s
 		// const_cast is safe in this context
 		unit*& out {const_cast<unit*&>(ptr)};
 
-		if (dirᵖᵗʳ + dirʳʰˢ != 0)
+		if (dirᵖᵗʳ + dirʳʰˢ != 0) [[likely]]
 		{
-			detail::copy<F, F>(out - dirᵖᵗʳ + dirʳʰˢ, out, end);
+			detail::copy<F, F>(out + dirᵖᵗʳ - dirʳʰˢ, out, end);
+
+			src->_SSOᴺ(src->size() + dirᵖᵗʳ
+			                       - dirʳʰˢ);
 		}
 		F::encode(rhs, out, dirʳʰˢ);
 
@@ -554,7 +586,7 @@ template <typename F, typeᵐᵉᵐˀ A> template <x69::usize N> template <char 
 
 		handleᵐᵘᵗ<S>::operator=(rhs);
 
-		// update after mutation
+		// if shift occurs
 		if (dirᵖᵗʳ - dirʳʰˢ != 0)
 		{
 			const auto dif {ptr - beg};
@@ -570,11 +602,12 @@ template <typename F, typeᵐᵉᵐˀ A> template <x69::usize N> template <char 
 					//          [0 < rhs]
 					//          [0 < rhs]
 
-					off -= dirᵖᵗʳ;
-					off += dirʳʰˢ;
+					off = off - dirᵖᵗʳ
+					          + dirʳʰˢ;
 				}
 			}
 		}
+
 		return *this;
 	}
 	if constexpr (S == 'R')
@@ -594,7 +627,7 @@ template <typename F, typeᵐᵉᵐˀ A> template <x69::usize N> template <char 
 
 		handleᵐᵘᵗ<S>::operator=(rhs);
 
-		// update after mutation
+		// if shift occurs
 		if (dirᵖᵗʳ + dirʳʰˢ != 0)
 		{
 			const auto dif {end - ptr};
@@ -610,11 +643,12 @@ template <typename F, typeᵐᵉᵐˀ A> template <x69::usize N> template <char 
 					//          [0 > rhs]
 					//          [0 < rhs]
 
-					off += dirᵖᵗʳ;
-					off -= dirʳʰˢ;
+					off = off + dirᵖᵗʳ;
+					          - dirʳʰˢ;
 				}
 			}
 		}
+
 		return *this;
 	}
 }

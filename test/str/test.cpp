@@ -41,19 +41,27 @@ TEST_CASE("A + B")
 	CHECK(U"foobar" == (U"foo" + bar));
 }
 
+TEST_CASE("flush")
+{
+	x69::str8 foo {u"foo"};
+	x69::str8 bar {U"bar"};
+
+	CHECK(x69::str8 {foo + bar} == U"foo"
+	                               U"bar");
+}
+
 TEST_CASE("range")
 {
-	x69::txt str {u8"티라미수"};
+	x69::txt str {u8"사랑해"};
 
 	using x69::magic::N;
 
-	CHECK(str[0] == U'티');
-	CHECK(str[1] == U'라');
-	CHECK(str[2] == U'미');
-	CHECK(str[3] == U'수');
+	CHECK(str[0] == U'사');
+	CHECK(str[1] == U'랑');
+	CHECK(str[2] == U'해');
 
 	CHECK(str.substr(0, N) == str);
-	CHECK(str.substr(0, 4) == str);
+	CHECK(str.substr(0, 3) == str);
 }
 
 TEST_CASE("split")
@@ -76,23 +84,37 @@ TEST_CASE("split")
 	CHECK(split[2] ==  u"말차라떼");
 }
 
+TEST_CASE("dangl")
+{
+	CHECK(x69::str {u8"lorem"}
+	               +
+	      x69::str {u8"ipsum"} == u"lorem"
+	                              u"ipsum");
+}
+
+TEST_CASE("alias")
+{
+	x69::str str {u8"우울계_𝕏친소 우울계_트친소"};
+
+	str += str.substr(0, 15);
+
+	CHECK(str == u"우울계_𝕏친소 우울계_트친소"
+	             u"우울계_𝕏친소 우울계_트친소");
+}
+
 TEST_CASE("range")
 {
 	x69::str str {u8"우울계_𝕏친소 우울계_트친소"
-	              u8"\n"
 	              u8"정병계_𝕏친소 정병계_트친소"};
 
 	for (auto [Σ, i] {str.it()}; Σ[i] != '\0'; ++i)
 	{
 		     if (Σ[i] == U'트') { Σ[i] = U'𝕏'; }
 		else if (Σ[i] == U'𝕏') { Σ[i] = U'트'; }
-
-		// x69::codeᵖᵗ out {Σ[i]}; std::cout << out;
 	}
 
-	CHECK(str == u8"우울계_트친소 우울계_𝕏친소"
-	             u8"\n"
-	             u8"정병계_트친소 정병계_𝕏친소");
+	CHECK(str == u"우울계_트친소 우울계_𝕏친소"
+	             u"정병계_트친소 정병계_𝕏친소");
 }
 
 TEST_CASE("UTF-8")
