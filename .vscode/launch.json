@@ -11,7 +11,7 @@
 			"program": "${command:cmake.launchTargetPath}",
 		},
 		{
-			"name": "(gdb) cppdbg",
+			"name": "(GDB) cppdbg",
 			// c++
 			"type": "cppdbg",
 			"MIMode": "gdb",
@@ -21,7 +21,7 @@
 			"program": "${command:cmake.launchTargetPath}",
 		},
 		{
-			"name": "(lldb) cppdbg",
+			"name": "(LLDB) cppdbg",
 			// c++
 			"type": "cppdbg",
 			"MIMode": "lldb",

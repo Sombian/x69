@@ -1,0 +1,20 @@
+# https://lldb.llvm.org/use/variable.html
+
+type format add -C no -f b x69::WORD
+type format add -C no -f b x69::BYTE
+
+type format add -C no -f f x69::f32
+type format add -C no -f f x69::f64
+
+type format add -C no -f d x69::isize
+type format add -C no -f d x69::usize
+
+type format add -C no -f d std::int8_t int8_t x69::i8
+type format add -C no -f d std::int16_t int16_t x69::i16
+type format add -C no -f d std::int32_t int32_t x69::i32
+type format add -C no -f d std::int64_t int64_t x69::i64
+
+type format add -C no -f d std::uint8_t uint8_t x69::u8
+type format add -C no -f d std::uint16_t uint16_t x69::u16
+type format add -C no -f d std::uint32_t uint32_t x69::u32
+type format add -C no -f d std::uint64_t uint64_t x69::u64

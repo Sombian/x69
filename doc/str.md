@@ -1,19 +1,20 @@
-| class | owns? | null-term? | use-after-free? |
-|:-----:|:-----:|:----------:|:---------------:|
-| `str` |   T   |   always   |       safe      |
-| `txt` |   F   |   maybe?   |      **UB**     |
-
-### **x69**::`str`
+### `str`
 
 `str` is a struct that manages string content ownership.  
-it supports seamless conversion between any available encodings.  
-all its APIs are designed to accept strings of any supported encoding.  
+it supports seamless conversion between any available encodings,  
+and its API accept strings in any supported encoding out of the box.  
 
+### `txt`
 
-### **x69**::`txt`
+`txt` is a lightweight struct that holds beg & end ptr to a string.  
+similar to that of `str`, its API performs transcoding, automatically.  
 
-`txt` is a lightweight struct that holds a pointer (view) to a string.  
-similar to that of `str`, its APIs performs transcoding, automatically.  
+## tl;dr
+
+| class | owns? | null-term? | use-after-free? |
+|:-----:|:-----:|:----------:|:---------------:|
+| `str` | **T** |   always   |       safe      |
+| `txt` | **F** |   mostly   |      **UB**     |
 
 ## TIPs
 
@@ -25,10 +26,10 @@ therefore, using an iterator is highly recommended for linear traversal.
 ```c++
 x69::str8 str {u8"hello world"};
 
-// time complexity: O(N)
+// time complexity := O(N)
 for (const auto code : str)
 {
-	// do something with it
+	// do something...
 }
 ```
 
@@ -37,27 +38,26 @@ for (const auto code : str)
 ```c++
 x69::str8 str {u8"hello world"};
 
-// time complexity: O(N)
+// time complexity := O(N)
 const auto len {str.length()};
 
-// time complexity: O(N)
+// time complexity := O(N)
 for (int i {0}; i < len; ++i)
 {
-	// time complexity: O(N)
-	const auto code {str[i]};
-	// do something with it
+	// do something....
 }
+// sum time complx := O(N^2)
 ```
 
 ---
 
-likewise each `.length()` call is **O(N)** for variable-width encodings.  
-therefore, it is important to cache the result if frequent access is needed.  
+likewise, each `.length()` call is **O(N)** for variable-width encodings.  
+because of this, its advised to cache the result if you need frequent access.  
 
 ### ✔️ O(N) * 1
 
 ```c++
-x69::str8 str {u8"마법소녀 마도카☆마기카"};
+x69::str8 str {u8"마법소녀 마도카☆마기카 2026: Rising"};
 
 const auto strlen {str.length()};
 
@@ -68,7 +68,7 @@ if (0 < strlen) { /*...*/ }
 ### ❌ O(N) * 2
 
 ```c++
-x69::str8 str {u8"마법소녀 마도카☆마기카"};
+x69::str8 str {u8"마법소녀 마도카☆마기카 2026: Rising"};
 
 if (0 < str.length()) { /*...*/ }
 if (0 < str.length()) { /*...*/ }
@@ -83,76 +83,95 @@ its best to match the operand's encoding to that of lhs, for greater efficiency.
 
 ```c++
 // utf8 to utf8
-x69::str8 str {u8"마법소녀 마도카☆마기카"};
+x69::str8 str {u8"마법소녀 마도카☆마기카 2026: Rising"};
 ```
 
 ### ❌ transcoding
 
 ```c++
 // utf16 to utf8
-x69::str8 str {u"마법소녀 마도카☆마기카"};
+x69::str8 str {u"마법소녀 마도카☆마기카 2026: Rising"};
 ```
 
 ---
 
-if you need a substring that involves the end of the string, consider using `range::N`.  
-it acts as a sentinel value, which enables backward traversal, for that extra performance.  
+if you need a substring anchored near the end of the string, consider using `magic::N`.  
+it acts as a sentinel value that enables backward traversal for that extra performance.  
 
 ### ✔️ walks backward
 
 ```c++
-x69::str8 str {u8"마법소녀 마도카☆마기카"};
+x69::str8 str {u8"마법소녀 마도카☆마기카 2026: Rising"};
 
-using x69::range::N;
+using x69::magic::N;
 
-const auto txt {str.substr(0, N - 69)};
+const auto txt {str.substr(0, N - 67)};
 ```
 
 ### ❌ walks forward
 
 ```c++
-x69::str8 str {u8"마법소녀 마도카☆마기카"};
+x69::str8 str {u8"마법소녀 마도카☆마기카 2026: Rising"};
 
 const auto N {str.length()};
 
-const auto txt {str.substr(0, N - 69)};
+const auto txt {str.substr(0, N - 67)};
 ```
 
 ---
 
-`str` supports self-healing iterators, which allows in-place code point mutation, during traversal.  
-**note**: self-healing has its limits. any mutation that isn't done by *current* proxy obj will result in **UB**.  
+all string concatenation ops are deferred until materialization, so compose away („• ֊ •„).  
+*this includes, but not limited to* := `LHS + RHS`, `LHS == RHS`, `LHS != RHS`, `str[N]`, etc.  
+
+### ✔️ expr templ
+
+```c++
+x69::str8 foo {u"fooᶠᵒᵒ"};
+x69::str8 bar {U"barᵇᵃʳ"};
+
+if (/* omit */(foo + bar) == U"fooᶠᵒᵒ"
+                             U"barᵇᵃʳ")
+{
+	// do something...
+}
+```
+
+### ❌ materialize
+
+```c++
+x69::str8 foo {u"fooᶠᵒᵒ"};
+x69::str8 bar {U"barᵇᵃʳ"};
+
+if (x69::str8 {foo + bar} == U"fooᶠᵒᵒ"
+                             U"barᵇᵃʳ")
+{
+	// do something...
+}
+```
+
+---
+
+in need of frequent look-*before/ahead*, consider using `.it<N>()`, where `N` specifies len of the `most recently used` cache.  
+(,; ⩌ ;,) self-healing has its limits. **mutations** perfomed outside the active proxy will result in **UB**, albeit sometimes it can be safe.  
 
 ### ✔️ safe mutation
 
 ```c++
-x69::str8 str {u8"마법소녀 마도카☆마기카"};
+x69::str str {u8"마법소녀 마도카☆마기카 2026: Rising"};
 
-for (auto code : str)
+for (auto [win, i] {str.it()}; win[i] != '\0'; ++i)
 {
-	code = U'♥'; // buffer shift: F
-	code = U'?'; // buffer shift: T
+	if (win[i] == U'☆') win[i] = U'♥'; // (˶ˆᗜˆ˵)
 }
 ```
 
 ### ❌ unsafe mutation
 
 ```c++
-x69::str8 str {u8"마법소녀 마도카☆마기카"};
+x69::str str {u8"마법소녀 마도카☆마기카 2026: Rising"};
 
-for (auto code : str)
+for (auto [win, i] {str.it()}; win[i] != '\0'; ++i)
 {
-	// technically safe
-	str = u8"마법소녀 마도카☆마기카";
-	// inherently unsafe
-	str = u8"기적도, 마법도, 있어..!";
-
-	if (...)
-	{
-		// technically safe
-		*this->begin() = U'♥'; // buffer shift: F
-		// inherently unsafe
-		*this->begin() = U'?'; // buffer shift: T
-	}
+	if (win[i] == U'☆') str[i] = U'♥'; // (╥ ᴗ ╥)
 }
 ```

@@ -1,9 +1,5 @@
 #pragma once
 
-#include <cassert>
-#include <cstddef>
-#include <cstdint>
-
 #include <bit>
 #include <ios>
 #include <ranges>
@@ -16,409 +12,687 @@
 #include <fstream>
 #include <iterator>
 #include <optional>
+#include <iostream>
 #include <algorithm>
-#include <functional>
-#include <filesystem>
 #include <type_traits>
+
+#include "../alias.hpp"
 
 inline auto operator>>(std::istream& os, char32_t code) noexcept -> std::istream&;
 inline auto operator<<(std::ostream& os, char32_t code) noexcept -> std::ostream&;
 
-#ifndef x69_MALLOC //=============//
-#define x69_MALLOC std::allocator //
-#endif             //=============//
+#define typeᵐᵉᵐˀ template <typename...> typename
 
-#define COPY_CONSTRUCTOR(T) constexpr T(const T&  other) noexcept
-#define MOVE_CONSTRUCTOR(T) constexpr T(/*&*/ T&& other) noexcept
+#define COPY_CONSTRUCTOR(T) constexpr T(const T& lval) noexcept
+#define MOVE_CONSTRUCTOR(T) constexpr T(/*&*/ T&& rval) noexcept
 
-#define COPY_ASSIGNMENT(T) constexpr auto operator=(const T&  other) noexcept -> T&
-#define MOVE_ASSIGNMENT(T) constexpr auto operator=(/*&*/ T&& other) noexcept -> T&
+#define COPY_ASSIGNMENT(T) constexpr auto operator=(const T& lval) noexcept -> T&
+#define MOVE_ASSIGNMENT(T) constexpr auto operator=(/*&*/ T&& rval) noexcept -> T&
 
-//┌─────────────────────────────────────────────────────────────┐
-//│ special thanks to facebook's folly::FBString                │
-//│                                                             │
-//│ SSO mode uses every bytes of heap string struct using union │
-//│ this was achievable thanks to the very clever memory layout │
-//│                                                             │
-//│ for more, watch https://www.youtube.com/watch?v=kPR8h4-qZdk │
-//└─────────────────────────────────────────────────────────────┘
+//┌──────────────────────────────────────────────────────────────┐
+//│ special thanks to facebook's folly::FBString.                │
+//│                                                              │
+//│ SSO mode uses every bytes of heap string struct using union. │
+//│ this was achievable thanks to the very clever memory layout. │
+//│                                                              │
+//│ for more, watch https://www.youtube.com/watch?v=kPR8h4-qZdk. │
+//└──────────────────────────────────────────────────────────────┘
 
 namespace x69
 {
-	class code_t final
-	{
-		char32_t arg;
+	template <typename Fˀ,  /*/───<↓>───/*/
+	          typeᵐᵉᵐˀ Aˀ = std::allocator> class str;
+	template <typename Fˀ                 > class txt;
 
-	public:
+	/*──────────────────────────────────────────────────────────────────────────/#┐*/
+	NEW_TYPE(codeᵖᵗ, char32_t, constexpr auto lower() const noexcept -> codeᵖᵗ; /*│*/
+	                           constexpr auto title() const noexcept -> codeᵖᵗ; /*│*/
+	                           constexpr auto upper() const noexcept -> codeᵖᵗ; /*│*/
+	                                                                            /*│*/
+	                           using c_str_ref = const char32_t(&)[1];          /*│*/
+	                           using c_str_mut = /*&*/ char32_t(&)[1];          /*│*/
+	                                                                            /*│*/
+	                           constexpr operator c_str_ref() const noexcept;   /*│*/
+	                           constexpr operator c_str_mut() /*&*/ noexcept;   /*│*/);
+	/*──────────────────────────────────────────────────────────────────────────/#┘*/
 
-		constexpr code_t
-		(
-			decltype(arg) arg
-		)
-		noexcept : arg {arg}
-		{}
-
-		constexpr operator char32_t() const noexcept;
-		constexpr operator char32_t() /*&*/ noexcept;
-
-		constexpr  code_t() noexcept = default;
-		constexpr ~code_t() noexcept = default;
-
-		// constexpr auto to_lowercase() const noexcept;
-		// constexpr auto to_uppercase() const noexcept;
-		// constexpr auto to_titlecase() const noexcept;
-	};
-
-	template <size_t N> struct format_t { char _[N];
-	[[nodiscard("🥝")]] constexpr auto operator==(const
-	format_t& rhs) const noexcept -> bool = default;
-	[[nodiscard("🍓")]] constexpr auto operator!=(const
-	format_t& rhs) const noexcept -> bool = default;
-	template <size_t U> constexpr auto operator==(const
-	format_t<U>&) const noexcept -> bool { return 0; };
-	template <size_t U> constexpr auto operator!=(const
-	format_t<U>&) const noexcept -> bool { return 1; };
-	constexpr format_t(const char (&str)[N]) noexcept
-	{ std::ranges::copy(/**/ str /**/, this->_); } };
-
-	enum class range : uint8_t {N};
-	struct clamp { const size_t _;
-	inline constexpr /**/ operator
-	size_t() const { return _; } };
-	inline constexpr auto operator-
-	(range, size_t offset) noexcept
-	-> clamp { return { offset }; }
-
-	#define CODER_AND_DECODER(UNIT, IS_VARIABLE, IS_STATEFUL)                \
-	{                                                                        \
-	    static constexpr const bool is_variable {IS_VARIABLE};               \
-	    static constexpr const bool is_stateful {IS_STATEFUL};               \
-	                                                                         \
-	    typedef UNIT unit_t;                                                 \
-	                                                                         \
-	    constexpr  codec() noexcept = delete;                                \
-	    constexpr ~codec() noexcept = delete;                                \
-	                                                                         \
-	    static constexpr auto size(/*&*/ code_t  code) noexcept -> int8_t;   \
-	    static constexpr auto next(const unit_t* data) noexcept -> int8_t;   \
-	    static constexpr auto back(const unit_t* data) noexcept -> int8_t;   \
-	                                                                         \
-	    static constexpr auto /* transform a code point into code units */   \
-	    encode(const code_t in, unit_t* out, int8_t step) noexcept -> void;  \
-	    static constexpr auto /* transform code units into a code point. */  \
-	    decode(const unit_t* in, code_t& out, int8_t step) noexcept -> void; \
-	}                                                                        \
-
-	template <format_t name> struct codec
-	CODER_AND_DECODER(void, false, false);
+	#define CODER_AND_DECODER(_unit, _is_variable, _is_stateful)            \
+	{                                                                       \
+	    static inline constexpr bool is_variable {_is_variable};            \
+	    static inline constexpr bool is_stateful {_is_stateful};            \
+	                                                                        \
+	    NEW_TYPE(stride, i8);                                               \
+	                                                                        \
+	    typedef _unit codeᵘᵗ;                                               \
+	                                                                        \
+	    static constexpr auto /* 𝑓 code point → abs(len) */                 \
+	    size([[maybe_unused]] const codeᵖᵗ& code) noexcept -> stride;       \
+	    static constexpr auto /* 𝑓 code unit(s) → pos(len) */               \
+	    next([[maybe_unused]] const codeᵘᵗ* data) noexcept -> stride;       \
+	    static constexpr auto /* 𝑓 code unit(s) → neg(len) */               \
+	    back([[maybe_unused]] const codeᵘᵗ* data) noexcept -> stride;       \
+	                                                                        \
+	    static constexpr auto /* 𝑓 code point → code unit(s). */            \
+	    encode(const codeᵖᵗ& in, codeᵘᵗ* out, stride dir) noexcept -> void; \
+	                                                                        \
+	    static constexpr auto /* 𝑓 code unit(s) → code point. */            \
+	    decode(const codeᵘᵗ* in, codeᵖᵗ& out, stride dir) noexcept -> void; \
+	}                                                                       \
 
 	// https://en.wikipedia.org/wiki/ASCII
-	template <> struct codec<"ASCII"> final
+	struct ASCII final
 	CODER_AND_DECODER(char, false, false);
 
 	// https://en.wikipedia.org/wiki/UTF-8
-	template <> struct codec<"UTF-8"> final
+	struct UTF_8 final
 	CODER_AND_DECODER(char8_t, true, false);
 
 	// https://en.wikipedia.org/wiki/UTF-16
-	template <> struct codec<"UTF-16"> final
+	struct UTF_16 final
 	CODER_AND_DECODER(char16_t, true, false);
 
 	// https://en.wikipedia.org/wiki/UTF-32
-	template <> struct codec<"UTF-32"> final
-	CODER_AND_DECODER(char32_t, true, false);
+	struct UTF_32 final
+	CODER_AND_DECODER(char32_t, false, false);
 
-	#undef CODER_AND_DECODER
-
-	template <format_t native, template <typename> typename malloc = x69_MALLOC> class str;
-	template <format_t native                                                  > class txt;
-
-	//┌───────┬───────┬────────────┬─────────────────┐
-	//│ class │ owns? │ null-term? │ use-after-free? │
-	//├───────┼───────┼────────────┼─────────────────┤
-	//│ [str] │   T   │   always   │      safe       │
-	//├───────┼───────┼────────────┼─────────────────┤
-	//│ [txt] │   F   │   maybe?   │      [UB]       │
-	//└───────┴───────┴────────────┴─────────────────┘
-
-	template <format_t native,
-	          typename derive> class cable
+	namespace API
 	{
-		   template <format_t,                  typename> friend class cable;
-		// template <format_t, template <class> typename> friend class   str;
-		// template <format_t                           > friend class   txt;
-
-		typedef typename codec<native>::unit_t unit_t;
-
-		//┌───────────────────────────────────────────────┐
-		//│ note: helper funs are not encapsulated within │
-		//│       and it was deliberate; to cut bin bloat │
-		//└───────────────────────────────────────────────┘
-
-		template <typename lhs_t, typename rhs_t> class concat;
-
-	public:
-		// returns the number of code units, excluding NULL-TERMINATOR.
-		constexpr auto size() const noexcept -> size_t;
-		// returns the number of code points, excluding NULL-TERMINATOR.
-		constexpr auto length() const noexcept -> size_t;
-
-		// returns a list of string slice, of which is a product of split aka division.
-		template <typename string> requires requires (string&& _)
-		                                             { txt {_}; }
-		constexpr auto split(string&& value) const noexcept -> std::vector<txt<native>>;
-		constexpr auto split(code_t   value) const noexcept -> std::vector<txt<native>>;
-
-		// returns a list of string slice, of which is a product of search occurrence.
-		template <typename string> requires requires (string&& _)
-		                                             { txt {_}; }
-		constexpr auto match(string&& value) const noexcept -> std::vector<txt<native>>;
-		constexpr auto match(code_t   value) const noexcept -> std::vector<txt<native>>;
-
-		// *self explanatory* returns whether or not it contains *parameter*.
-		template <typename string> requires requires (string&& _)
-		                                             { txt {_}; }
-		constexpr auto contains(string&& value) const noexcept -> bool;
-		constexpr auto contains(code_t   value) const noexcept -> bool;
-
-		// *self explanatory* returns whether or not it starts with *parameter*.
-		template <typename string> requires requires (string&& _)
-		                                             { txt {_}; }
-		constexpr auto starts_with(string&& value) const noexcept -> bool;
-		constexpr auto starts_with(code_t   value) const noexcept -> bool;
-
-		// *self explanatory* returns whether or not it ends with *parameter*.
-		template <typename string> requires requires (string&& _)
-		                                             { txt {_}; }
-		constexpr auto ends_with(string&& value) const noexcept -> bool;
-		constexpr auto ends_with(code_t   value) const noexcept -> bool;
-
-		// returns a slice, of which is a product of substring. N is a sentinel value.
-		constexpr auto substr(clamp  start, clamp  until) const noexcept -> txt<native>;
-		constexpr auto substr(clamp  start, range  until) const noexcept -> txt<native>;
-		constexpr auto substr(size_t start, clamp  until) const noexcept -> txt<native>;
-		constexpr auto substr(size_t start, range  until) const noexcept -> txt<native>;
-		constexpr auto substr(size_t start, size_t until) const noexcept -> txt<native>;
-
-		// string to integer; ASSUMES ALL CODE POINTS ARE THAT OF NUMERICAL REPRESENTATION
-		constexpr auto stoi(uint8_t radix = 10) const noexcept -> size_t;
-		// string to decimal; ASSUMES ALL CODE POINTS ARE THAT OF NUMERICAL REPRESENTATION
-		constexpr auto stof(uint8_t radix = 10) const noexcept -> double;
-
-		// operators
-
-		constexpr auto operator[](size_t rhs) const noexcept -> decltype(auto);
-		constexpr auto operator[](size_t rhs) /*&*/ noexcept -> decltype(auto);
-
-		template <typename string> requires requires (string&& _)
-		                                             { txt {_}; }
-		constexpr auto operator==(string&& rhs) const noexcept -> bool;
-		constexpr auto operator==(code_t   rhs) const noexcept -> bool;
-
-		template <typename string> requires requires (string&& _)
-		                                             { txt {_}; }
-		constexpr auto operator!=(string&& rhs) const noexcept -> bool;
-		constexpr auto operator!=(code_t   rhs) const noexcept -> bool;
-
-		// this + ???
-
-		template <typename string> requires requires (string&& _)
-		                                             { txt {_}; }
-		constexpr auto operator+(string&& rhs) const noexcept -> concat<txt<native>, decltype(txt {rhs})>
+		template <typename _, typename F> class cstr
 		{
-			return {{static_cast<const derive&>(*this)}, {txt {rhs}}};
-		}
-		constexpr auto operator+(code_t   rhs) const noexcept -> concat<txt<native>, decltype(   rhs   )>
-		{
-			return {{static_cast<const derive&>(*this)}, {   rhs   }};
-		}
+			// shorthand; CODEC's code unit
+			typedef typename F::codeᵘᵗ unit;
 
-		// ??? + this
+			template <char S>        class handle;
+			template <char S> friend class handle;
 
-		template <typename string> requires requires (string&& _)
-		                                             { txt {_}; } && (!std::is_base_of_v<std::remove_cvref_t<string>, derive>)
-		                                                             // fix; ambiguious overloads causes by derived class(es)
-		friend constexpr auto operator+(string&& lhs, const derive& rhs) noexcept -> concat<decltype(txt {lhs}), txt<native>>
-		{
-			return {/* no need for static_cast */ {txt {lhs}}, {rhs}};
-		}
-		friend constexpr auto operator+(code_t   lhs, const derive& rhs) noexcept -> concat<decltype(   lhs   ), txt<native>>
-		{
-			return {/* no need for static_cast */ {   lhs   }, {rhs}};
-		}
+			template <char S>        class cursor;
+			template <char S> friend class cursor;
 
-	private:
+			template <usize N>        class window;
+			template <usize N> friend class window;
 
-		template <typename lhs_t,
-		          typename rhs_t> class concat
-		{
-			lhs_t lhs;
-			rhs_t rhs;
+			template <typename... Tᴺ>        class concat;
+			template <typename... Tᴺ> friend class concat;
+
+			// befriend to every instantiation thereof cstr
+			template <typename, typename> friend class cstr;
+
+			constexpr auto _head() const noexcept -> const unit*;
+			constexpr auto _tail() const noexcept -> const unit*;
 
 		public:
 
-			constexpr concat
-			(
-				decltype(lhs) lhs,
-				decltype(rhs) rhs
-			)
-			noexcept : lhs {lhs},
-			           rhs {rhs}
-			{}
+			// returns → number of __code unit__(s), excluding {null-term}.
+			constexpr auto size() const noexcept -> usize;
+			// returns → number of __code point__(s), excluding {null-term}.
+			constexpr auto length() const noexcept -> usize;
 
-			template <format_t exotic,
-			          template <class>
-			          typename malloc> constexpr operator str<exotic,
-			                                                  malloc>() const noexcept;
+			// returns → (whether or not := bool) it starts w/ {parameter}.
+			constexpr auto starts_w(auto&& inˀ) const noexcept -> bool requires requires { txt {inˀ}; };
 
-			// this + ???
+			// returns → (whether or not := bool) it contains {parameter}.
+			constexpr auto contains(auto&& inˀ) const noexcept -> bool requires requires { txt {inˀ}; };
 
-			template <typename string> requires requires (string&& _)
-			                                             { txt {_}; }
-			constexpr auto operator+(string&& rhs) const noexcept -> concat<concat, decltype(txt {rhs})>
+			// returns → (whether or not := bool) it ends w/ {parameter}.
+			constexpr auto ends_w(auto&& inˀ) const noexcept -> bool requires requires { txt {inˀ}; };
+
+			// returns → __slice__, of which is a product of substring.
+			constexpr auto substr(clamp start, clamp until) const noexcept -> txt<F>;
+			constexpr auto substr(clamp start, magic until) const noexcept -> txt<F>;
+			constexpr auto substr(usize start, clamp until) const noexcept -> txt<F>;
+			constexpr auto substr(usize start, magic until) const noexcept -> txt<F>;
+			constexpr auto substr(usize start, usize until) const noexcept -> txt<F>;
+
+			constexpr auto begin() const noexcept -> cursor<'L'>;
+			constexpr auto end() const noexcept -> cursor<'L'>;
+
+			constexpr auto rbegin() const noexcept -> cursor<'R'>;
+			constexpr auto rend() const noexcept -> cursor<'R'>;
+
+			// returns → memo, suitable for both sequential & random access.
+			template <usize N = 3>
+			constexpr auto it() const noexcept -> std::tuple<window<N>, usize>;
+			template <usize N = 3>
+			constexpr auto it() /*&*/ noexcept -> std::tuple<window<N>, usize>;
+
+			constexpr auto operator[](usize rhs) const noexcept -> handle<'L'>;
+			constexpr auto operator[](magic rhs) const noexcept -> handle<'R'>;
+			constexpr auto operator[](clamp rhs) const noexcept -> handle<'R'>;
+
+			// returns → list of __slice__, of which is a product of split(s).
+			constexpr auto split(auto&& inˀ) const noexcept -> std::vector<txt<F>> requires requires { txt {inˀ}; };
+			// returns → list of __slice__, of which is a product of match(s).
+			constexpr auto match(auto&& inˀ) const noexcept -> std::vector<txt<F>> requires requires { txt {inˀ}; };
+
+			// check following(s) in order: __address__, __length__, __content__.
+			constexpr auto operator==(auto&& rhs) const noexcept -> bool requires requires { txt {rhs}; };
+			constexpr auto operator!=(auto&& rhs) const noexcept -> bool requires requires { txt {rhs}; };
+
+			friend constexpr auto operator==(auto&& lhs, const _& rhs) noexcept -> bool requires requires { txt {lhs}; } && (!std::is_base_of_v<cstr, std::remove_cvref_t<decltype(lhs)>>)
 			{
-				return {{*this}, {txt {rhs}}};
+				return rhs.operator==(lhs);
 			}
-			constexpr auto operator+(code_t   rhs) const noexcept -> concat<concat, decltype(   rhs   )>
+			friend constexpr auto operator!=(auto&& lhs, const _& rhs) noexcept -> bool requires requires { txt {lhs}; } && (!std::is_base_of_v<cstr, std::remove_cvref_t<decltype(lhs)>>)
 			{
-				return {{*this}, {   rhs   }};
+				return rhs.operator!=(lhs);
 			}
 
-			// ??? + this
-
-			template <typename string> requires requires (string&& _)
-			                                             { txt {_}; }
-			friend constexpr auto operator+(string&& lhs, concat& rhs) noexcept -> concat<decltype(txt {lhs}), concat>
+			friend constexpr auto operator+(const _& lhs, auto&& rhs) noexcept -> concat<decltype(lhs),
+			                                                                             decltype(rhs)> requires requires { txt {rhs}; } // (!std::is_base_of_v<cstr, std::remove_cvref_t<decltype(rhs)>>)
 			{
-				return {{txt {lhs}}, {rhs}};
+				return {lhs, rhs};
 			}
-			friend constexpr auto operator+(code_t   lhs, concat& rhs) noexcept -> concat<decltype(   rhs   ), concat>
+			friend constexpr auto operator+(auto&& lhs, const _& rhs) noexcept -> concat<decltype(lhs),
+			                                                                             decltype(rhs)> requires requires { txt {lhs}; } && (!std::is_base_of_v<cstr, std::remove_cvref_t<decltype(lhs)>>)
 			{
-				return {{   lhs   }, {rhs}};
+				return {lhs, rhs};
 			}
 
 		private:
 
-			   constexpr auto __for_each__(const auto&& fun) const noexcept -> void;
-			// constexpr auto __for_each__(const auto&& fun) /*&*/ noexcept -> void;
+			template <char S> class handle
+			{
+				const unit* ptr;
+
+			public:
+
+				friend _; // {🔓}
+				constexpr handle
+				(
+					decltype(ptr) _ptr
+				)
+				noexcept : ptr {_ptr} {}
+
+				constexpr operator codeᵖᵗ() const noexcept; // getter..?
+
+				constexpr auto operator==(codeᵖᵗ rhs) const noexcept -> bool;
+				constexpr auto operator!=(codeᵖᵗ rhs) const noexcept -> bool;
+
+				// constexpr auto operator=(codeᵖᵗ rhs) noexcept -> handle&;
+			};
+
+			template <char S> class cursor
+			{
+				const unit* ptr;
+
+			public:
+
+				using iterator_category = std::bidirectional_iterator_tag;
+				using iterator_concept = std::bidirectional_iterator_tag;
+				using difference_type = std::ptrdiff_t;
+				using value_type = codeᵖᵗ;
+				using reference = codeᵖᵗ;
+
+				// stl compat {default_initializable}
+				constexpr  cursor() noexcept = default;
+				constexpr ~cursor() noexcept = default;
+
+				friend _; // {🔓}
+				constexpr cursor
+				(
+					const unit* _ptr
+				)
+				noexcept : ptr {_ptr} {}
+
+				constexpr auto operator*() const noexcept -> value_type;
+
+				constexpr auto operator++(   ) noexcept -> cursor&;
+				constexpr auto operator--(   ) noexcept -> cursor&;
+				constexpr auto operator++(int) noexcept -> cursor;
+				constexpr auto operator--(int) noexcept -> cursor;
+
+				constexpr auto operator==(const cursor& rhs) const noexcept -> bool;
+				constexpr auto operator!=(const cursor& rhs) const noexcept -> bool;
+			};
+
+			template <usize N> class window
+			{
+				const unit* beg;
+				const unit* end;
+
+				WORD map;
+
+				struct log { usize key {0};
+				             isize off {0}; } logs[N];
+
+				// ```
+				// where N(3) = | 0 1 1 | where N(4) = | 0 1 1 1 |
+				//              | 0 0 1 |              | 0 0 1 1 |
+				//              | 0 0 0 |              | 0 0 0 1 |
+				//                                     | 0 0 0 0 |
+				// ```
+				static constexpr auto NxN {[]
+				{
+					WORD out {0};
+
+					for (usize y {0}; y < N; ++y)
+					{
+						for (usize x {0}; x < N; ++x)
+						{
+							if (x < y)
+							{
+								const auto off {y * N + x};
+
+								out /**/ |= WORD {1} << off;
+							}
+						}
+					}
+					return out;
+				}
+				()};
+
+				// given __N__ = __3__
+				// ```
+				// mask[0] = | 1 1 1 | mask[1] = | 0 0 0 | mask[2] = | 0 0 0 |
+				//           | 0 0 0 |           | 1 1 1 |           | 0 0 0 |
+				//           | 0 0 0 |           | 0 0 0 |           | 1 1 1 |
+				// ```
+				static constexpr auto ROWⁿ {[]
+				{
+					std::array<WORD, N> out {0};
+
+					for (usize i {0}; i < N; ++i)
+					{
+						for (usize x {0}; x < N; ++x)
+						{
+							const auto off {i * N + x};
+
+							out[i] |= WORD {1} << off;
+						}
+					}
+					return out;
+				}
+				()};
+
+				// given __N__ = __3__
+				// ```
+				// mask[0] = | 0 1 1 | mask[1] = | 1 0 1 | mask[2] = | 1 1 0 |
+				//           | 0 1 1 |           | 1 0 1 |           | 1 1 0 |
+				//           | 0 1 1 |           | 1 0 1 |           | 1 1 0 |
+				// ```
+				static constexpr auto COLⁿ {[]
+				{
+					std::array<WORD, N> out {0};
+
+					for (usize i {0}; i < N; ++i)
+					{
+						for (usize x {0}; x < N; ++x)
+						{
+							for (usize y {0}; y < N; ++y)
+							{
+								if (x == i) { continue; }
+
+								const auto off {y * N + x};
+
+								out[i] |= WORD {1} << off;
+							}
+						}
+					}
+					return out;
+				}
+				()};
+
+				static_assert(0 < N && N * N <= sizeof(WORD) * 8, "[1, 32]");
+
+				// returns → [MRU...LRU] in std::array
+				constexpr auto _ranks() const noexcept -> std::array<u8, N>;
+
+			public:
+
+				friend _; // {🔓}
+				constexpr window
+				(
+					decltype(beg) _beg,
+					decltype(end) _end
+				)
+				noexcept : beg {_beg},
+				           end {_end},
+				           map { NxN} {}
+
+				constexpr auto operator[](usize rhs) noexcept -> handle<'L'>;
+				constexpr auto operator[](magic rhs) noexcept -> handle<'R'>;
+				constexpr auto operator[](clamp rhs) noexcept -> handle<'R'>;
+			};
+
+			template <typename... Tᴺ> class concat
+			{
+				template <typename T> using upcast = std::conditional_t // lval := ref
+				<                                                       // rval := val
+					std::is_lvalue_reference_v<T>, const std::remove_cvref_t<T>&,
+					                               /*&*/ std::remove_cvref_t<T>>;
+
+				std::tuple<upcast<Tᴺ>...> args;
+
+				template <char S>        class handle;
+				template <char S> friend class handle;
+
+				template <char S>        class cursor;
+				template <char S> friend class cursor;
+
+			public:
+
+				friend _; // {🔓}
+				constexpr concat
+				(
+					upcast<Tᴺ>... _args
+				)
+				noexcept : args {_args...} {};
+
+				template <typename Fˀ,
+				          typeᵐᵉᵐˀ Aˀ>
+				// flush; materialize?
+				constexpr operator str<Fˀ, Aˀ>() const noexcept;
+
+				constexpr auto begin() const noexcept -> cursor<'L'>;
+				constexpr auto end() const noexcept -> cursor<'L'>;
+
+				constexpr auto rbegin() const noexcept -> cursor<'R'>;
+				constexpr auto rend() const noexcept -> cursor<'R'>;
+
+				constexpr auto operator[](usize rhs) const noexcept -> handle<'L'>;
+				constexpr auto operator[](magic rhs) const noexcept -> handle<'R'>;
+				constexpr auto operator[](clamp rhs) const noexcept -> handle<'R'>;
+
+				friend constexpr auto operator==(const concat& lhs, auto&& rhs) noexcept -> bool requires requires { txt {rhs}; } // (!std::is_base_of_v<concat, std::remove_cvref_t<decltype(rhs)>>)
+				{
+					return std::ranges::equal(lhs, txt {rhs});
+				}
+				friend constexpr auto operator!=(auto&& lhs, const concat& rhs) noexcept -> bool requires requires { txt {lhs}; } && (!std::is_base_of_v<concat, std::remove_cvref_t<decltype(lhs)>>)
+				{
+					return !std::ranges::equal(txt {lhs}, rhs);
+				}
+
+				friend constexpr auto operator+(const concat& lhs, auto&& rhs) noexcept -> concat<Tᴺ..., decltype(rhs)> requires requires { txt {rhs}; } // (!std::is_base_of_v<concat, std::remove_cvref_t<decltype(rhs)>>)
+				{
+					return std::apply([&](auto&&... lhs) -> concat<Tᴺ..., decltype(rhs)> { return {std::forward<decltype(lhs)>(lhs)..., std::forward<decltype(rhs)>(rhs)}; }, lhs.args);
+				}
+				friend constexpr auto operator+(auto&& lhs, const concat& rhs) noexcept -> concat<decltype(lhs), Tᴺ...> requires requires { txt {lhs}; } && (!std::is_base_of_v<concat, std::remove_cvref_t<decltype(lhs)>>)
+				{
+					return std::apply([&](auto&&... rhs) -> concat<decltype(lhs), Tᴺ...> { return {std::forward<decltype(lhs)>(lhs), std::forward<decltype(rhs)>(rhs)...}; }, rhs.args);
+				}
+
+				   template <typename... Tᴹ> friend constexpr auto operator+(const concat& lhs, concat<Tᴹ...>&& rhs) noexcept -> concat<Tᴺ..., Tᴹ...> // (!std::is_base_of_v<concat, std::remove_cvref_t<decltype(rhs)>>)
+				   {
+				   	return std::apply([&](auto&&... args) -> concat<decltype(lhs), Tᴺ...> { return {std::forward<decltype(args)>(args)...}; }, std::tuple_cat(lhs.args, rhs.args));
+				   }
+				// template <typename... Tᴹ> friend constexpr auto operator+(concat<Tᴹ...>&& lhs, const concat& rhs) noexcept -> concat<Tᴺ..., Tᴹ...> && (!std::is_base_of_v<concat, std::remove_cvref_t<decltype(lhs)>>)
+				// {
+				//  return std::apply([&](auto&&... args) -> concat<decltype(lhs), Tᴺ...> { return {std::forward<decltype(args)>(args)...}; }, std::tuple_cat(lhs.args, rhs.args));
+				// }
+
+			private:
+
+				template <char S> class needle
+				{
+					const concat* src;
+					// buffer ?meta?
+					usize       ctx;
+					const void* beg;
+					const void* end;
+					const void* ptr;
+
+				public:
+
+					constexpr needle
+					(
+						decltype(src) _src,
+						decltype(ctx) _ctx,
+						decltype(beg) _beg,
+						decltype(end) _end,
+						decltype(ptr) _ptr
+					)
+					noexcept : src {_src},
+					           ctx {_ctx},
+					           beg {_beg},
+					           end {_end},
+					           ptr {_ptr} {}
+
+					constexpr auto operator*() const noexcept -> codeᵖᵗ;
+
+					constexpr auto operator++(   ) noexcept -> needle&;
+					constexpr auto operator--(   ) noexcept -> needle&;
+					constexpr auto operator++(int) noexcept -> needle;
+					constexpr auto operator--(int) noexcept -> needle;
+
+					constexpr auto operator==(const needle& rhs) const noexcept -> bool;
+					constexpr auto operator!=(const needle& rhs) const noexcept -> bool;
+				};
+
+				template <char S> class handle
+				{
+					needle<S> ptr {0,0,0,0,0};
+
+				public:
+
+					constexpr handle
+					(
+						decltype(ptr) _ptr
+					)
+					noexcept : ptr {_ptr} {}
+
+					constexpr operator codeᵖᵗ() const noexcept; // getter..?
+	
+					constexpr auto operator==(codeᵖᵗ rhs) const noexcept -> bool;
+					constexpr auto operator!=(codeᵖᵗ rhs) const noexcept -> bool;
+	
+					// constexpr auto operator=(codeᵖᵗ rhs) noexcept -> handle&;
+				};
+
+				template <char S> class cursor
+				{
+					needle<S> ptr {0,0,0,0,0};
+
+				public:
+
+					using iterator_category = std::bidirectional_iterator_tag;
+					using iterator_concept = std::bidirectional_iterator_tag;
+					using difference_type = std::ptrdiff_t;
+					using value_type = codeᵖᵗ;
+					using reference = codeᵖᵗ;
+
+					// stl compat {default_initializable}
+					constexpr  cursor() noexcept = default;
+					constexpr ~cursor() noexcept = default;
+
+					constexpr cursor
+					(
+						decltype(ptr) _ptr
+					)
+					noexcept : ptr {_ptr} {}
+
+					constexpr auto operator*() const noexcept -> value_type;
+
+					constexpr auto operator++(   ) noexcept -> cursor&;
+					constexpr auto operator--(   ) noexcept -> cursor&;
+					constexpr auto operator++(int) noexcept -> cursor;
+					constexpr auto operator--(int) noexcept -> cursor;
+
+					constexpr auto operator==(const cursor& rhs) const noexcept -> bool;
+					constexpr auto operator!=(const cursor& rhs) const noexcept -> bool;
+				};
+			};
+
+		protected:
+
+			template <char  S> using cursor_t = cursor<S>;
+			template <char  S> using handle_t = handle<S>;
+			template <usize N> using window_t = window<N>;
+
+			template <typename Tᵒᵇʲ,
+			          typename Tᵒᵘᵗ> static constexpr auto use(const auto* obj, Tᵒᵘᵗ Tᵒᵇʲ::*ptr) noexcept -> const Tᵒᵘᵗ&
+			requires
+			(
+				std::is_base_of_v<Tᵒᵇʲ, std::remove_cvref_t<decltype(*obj)>> && std::is_member_object_pointer_v<Tᵒᵘᵗ Tᵒᵇʲ::*>
+			)
+			{
+				return static_cast<const Tᵒᵇʲ*>(obj)->*ptr;
+			};
+			template <typename Tᵒᵇʲ,
+			          typename Tᵒᵘᵗ> static constexpr auto use(/*&*/ auto* obj, Tᵒᵘᵗ Tᵒᵇʲ::*ptr) noexcept -> /*&*/ Tᵒᵘᵗ&
+			requires
+			(
+				std::is_base_of_v<Tᵒᵇʲ, std::remove_cvref_t<decltype(*obj)>> && std::is_member_object_pointer_v<Tᵒᵘᵗ Tᵒᵇʲ::*>
+			)
+			{
+				return static_cast</*&*/ Tᵒᵇʲ*>(obj)->*ptr;
+			};
 		};
-	};
+	}
 
-	//┌───────┬────────────┬─────────────────┐
-	//│ owns? │ null-term? │ use-after-free? │
-	//├───────┼────────────┼─────────────────┤
-	//│   T   │   always   │      safe       │
-	//└───────┴────────────┴─────────────────┘
-
-	template <format_t native,
-	          template <class>
-	          typename malloc> class str final : public cable<native, str<native,
-	                                                                      malloc>>
+	template <typename F> class txt final : public API::cstr<txt<F>, F>
 	{
-		template <format_t,                  typename> friend class cable;
-		template <format_t, template <class> typename> friend class   str;
-		template <format_t                           > friend class   txt;
+		typedef API::cstr<txt, F> super;
 
-		typedef typename codec<native>::unit_t unit_t;
+		// shorthand; CODEC's code unit
+		typedef typename F::codeᵘᵗ unit;
 
-		class reader; friend reader;
-		class writer; friend writer;
+		const unit* head;
+		const unit* tail;
 
-		class forward_iterator; friend forward_iterator;
-		class reverse_iterator; friend reverse_iterator;
-
-		#define IS_LITTLE       \
-		(                       \
-		    std::endian::native \
-		             ==         \
-		    std::endian::little \
-		)                       \
-
-		enum mode_t : uint8_t
-		{
-			SMALL = IS_LITTLE
-			        ?
-			        0b00000000
-			        :
-			        0b00000000,
-
-			LARGE = IS_LITTLE
-			        ?
-			        0b10000000
-			        :
-			        0b00000001,
-		};
-
-		struct buffer
-		{
-			unit_t* head;
-			unit_t* last;
-			size_t  size : (sizeof(size_t) * 8) - (sizeof(mode_t) * 8);
-			size_t  meta :                        (sizeof(mode_t) * 8);
-
-			[[nodiscard]] constexpr operator const unit_t*() const noexcept;
-			[[nodiscard]] constexpr operator /*&*/ unit_t*() /*&*/ noexcept;
-		};
-
-		//┌───────────────────────────┐
-		//│           small           │
-		//├──────┬──────┬──────┬──────┤
-		//│ head │ last │ size │ meta │
-		//├──────┴──────┴──────┴──────┤
-		//│           bytes           │
-		//└───────────────────────────┘
-
-		[[no_unique_address]] malloc<unit_t> tag;
-
-		union
-		{
-			unit_t small [sizeof(buffer) / sizeof(unit_t)];
-
-			buffer large;
-
-			uint8_t bytes [sizeof(buffer) / sizeof(uint8_t)];
-		};
-
-		static_assert(sizeof(buffer) == sizeof(size_t) * 3);
-		static_assert(alignof(buffer) == alignof(size_t) * 1);
-
-		static_assert(offsetof(buffer, head) == sizeof(size_t) * 0);
-		static_assert(offsetof(buffer, last) == sizeof(size_t) * 1);
-
-		static constexpr const uint8_t MAX {            (sizeof(buffer) - 1) / (sizeof(unit_t) * 1)};
-		static constexpr const uint8_t RMB {            (sizeof(buffer) - 1) * (         1        )};
-		static constexpr const uint8_t SFT {IS_LITTLE ? (         0        ) : (         1        )};
-		static constexpr const uint8_t MSK {IS_LITTLE ? (0b10000000        ) : (0b00000001        )};
-
-		#undef IS_LITTLE
+		// befriend to every instantiation thereof of IMPL(s)
+		template <typename, typeᵐᵉᵐˀ> friend class str;
+		template <typename          > friend class txt;
+		// befriend to every instantiation thereof of CRTP(s)
+		template <typename, typename> friend class API::cstr;
 
 	public:
 
-		// optional; returns the content of a file with CRLF/CR to LF normalization.
-		template <typename STRING> friend auto fileof(const STRING& path) noexcept -> std::optional
-		                                                                              <
-		                                                                              	std::variant
-		                                                                              	<
-		                                                                              		str<"UTF-8">
-		                                                                              		,
-		                                                                              		str<"UTF-16">
-		                                                                              		,
-		                                                                              		str<"UTF-32">
-		                                                                              	>
-		                                                                              >;
+		constexpr txt
+		(
+			decltype(head) _head,
+			decltype(tail) _tail
+		)
+		noexcept : head {_head},
+		           tail {_tail} {}
 
-		explicit constexpr operator const unit_t*() const noexcept;
-		explicit constexpr operator /*&*/ unit_t*() /*&*/ noexcept;
+		template <usize N>
+		// from {literal}
+		constexpr txt
+		(
+			const unit (&init)[N]
+		)
+		noexcept : head {&init[N - N]},
+		           tail {&init[N - 1]} {}
 
-		template <typename string> requires requires (string&& _)
-		                                             { txt {_}; }
-		constexpr str(string&& value) noexcept;
-		constexpr str(code_t   value) noexcept;
+		template <typeᵐᵉᵐˀ A>
+		// from {x69::str}
+		constexpr txt
+		(
+			const str<F, A>& init
+		)
+		noexcept : head {init._head()},
+		           tail {init._tail()} {}
+
+		constexpr txt // UTF-8
+		(
+			const char8_t& _
+		)
+		noexcept requires (std::is_same_v<F, UTF_8>) : head {&_ + 0},
+		                                               tail {&_ + 1} {}
+
+		constexpr txt // UTF-16
+		(
+			const char16_t& _
+		)
+		noexcept requires (std::is_same_v<F, UTF_16>) : head {&_ + 0},
+		                                                tail {&_ + 1} {}
+
+		constexpr txt // UTF-32
+		(
+			const char32_t& _
+		)
+		noexcept requires (std::is_same_v<F, UTF_32>) : head {&_ + 0},
+		                                                tail {&_ + 1} {}
+	};
+
+	template <typename F,
+	          typeᵐᵉᵐˀ A> class str final : public API::cstr<str<F,
+	                                                             A>, F>
+	{
+		typedef API::cstr<str, F> super;
+
+		// shorthand; CODEC's code unit
+		typedef typename F::codeᵘᵗ unit;
+
+		template <char S>        class handleᵐᵘᵗ;
+		template <char S> friend class handleᵐᵘᵗ;
+
+		template <usize N>        class windowᵐᵘᵗ;
+		template <usize N> friend class windowᵐᵘᵗ;
+
+		// befriend to every instantiation thereof of IMPL(s)
+		template <typename, typeᵐᵉᵐˀ> friend class str;
+		template <typename          > friend class txt;
+		// befriend to every instantiation thereof of CRTP(s)
+		template <typename, typename> friend class API::cstr;
+
+		enum mode : BYTE
+		{
+			SSO = std::endian::native == std::endian::little ? 0b00000000
+			                                                 : 0b00000000,
+			STD = std::endian::native == std::endian::little ? 0b10000000
+			                                                 : 0b00000001,
+		};
+
+		struct blob final
+		{
+			unit* head;
+			unit* last;
+			WORD  meta;
+		};
+
+		static constexpr u8 MAX {(sizeof(blob) - 1) / (sizeof(unit))};
+		static constexpr u8 RMB {(sizeof(blob) - 1) * (      1     )};
+
+		//┌────────────────────┐
+		//│       small        │
+		//├──────┬──────┬──────┤
+		//│ head │ last │ meta │
+		//├──────┴──────┴──────┤
+		//│       bytes        │
+		//└────────────────────┘
+
+		[[no_unique_address, msvc::no_unique_address]] A<unit> useᵐᵉᵐˀ;
+
+		union
+		{
+			unit small [sizeof(blob) / sizeof(unit)];
+			blob large                              ;
+			BYTE bytes [sizeof(blob) / sizeof(char)];
+		};
+
+		constexpr auto _mode() const noexcept -> mode;
+
+		constexpr auto _head() const noexcept -> const unit*;
+		constexpr auto _head() /*&*/ noexcept -> /*&*/ unit*;
+		constexpr auto _tail() const noexcept -> const unit*;
+		constexpr auto _tail() /*&*/ noexcept -> /*&*/ unit*;
+
+		constexpr auto _SSOᴺ(usize inˀ) noexcept -> void;
+
+		template <char  S> using handleᶠⁱⁿ = typename API::cstr<str, F>::template handle_t<S>;
+		template <char  S> using cursorᶠⁱⁿ = typename API::cstr<str, F>::template cursor_t<S>;
+		template <usize N> using windowᶠⁱⁿ = typename API::cstr<str, F>::template window_t<N>;
+
+	public:
+
+		// CRLF/CR to LF normalization.
+		template <template <typename> typename Aˀ> friend auto fileof(auto&& pathˀ) noexcept -> std::optional
+		                                                                                        <
+		                                                                                        	std::variant
+		                                                                                        	<
+		                                                                                        		str<UTF_8, Aˀ>
+		                                                                                        		,
+		                                                                                        		str<UTF_16, Aˀ>
+		                                                                                        		,
+		                                                                                        		str<UTF_32, Aˀ>
+		                                                                                        	>
+		                                                                                        >;
+
+		constexpr str(auto&& init) noexcept requires requires { txt {init}; };
 
 		constexpr  str() noexcept;
 		constexpr ~str() noexcept;
-
-		// rule of 5
 
 		COPY_CONSTRUCTOR(str);
 		MOVE_CONSTRUCTOR(str);
@@ -426,634 +700,213 @@ namespace x69
 		COPY_ASSIGNMENT(str);
 		MOVE_ASSIGNMENT(str);
 
-		// returns the number of code units it can hold, excluding NULL-TERMINATOR.
-		constexpr auto capacity(/* getter */) const noexcept -> size_t;
-		// changes the number of code units it can hold, excluding NULL-TERMINATOR.
-		constexpr auto capacity(size_t value) /*&*/ noexcept -> void;
+		// gets the number of code units it can hold, excluding {null-term}.
+		constexpr auto space(/* get */) const noexcept -> usize;
+		// sets the number of code units it can hold, excluding {null-term}.
+		constexpr auto spare(usize inˀ) /*&*/ noexcept -> void;
 
-		// iterator
+		constexpr auto operator[](usize rhs) const noexcept -> handleᶠⁱⁿ<'L'>;
+		constexpr auto operator[](usize rhs) /*&*/ noexcept -> handleᵐᵘᵗ<'L'>;
 
-		constexpr auto begin() const noexcept -> decltype(auto); // requires nothing; always active
-		constexpr auto end() const noexcept -> decltype(auto); // requires nothing; always active
+		constexpr auto operator[](magic rhs) const noexcept -> handleᶠⁱⁿ<'R'>;
+		constexpr auto operator[](magic rhs) /*&*/ noexcept -> handleᵐᵘᵗ<'R'>;
 
-		constexpr auto begin() /*&*/ noexcept -> forward_iterator; // requires nothing; always active
-		constexpr auto end() /*&*/ noexcept -> forward_iterator; // requires nothing; always active
+		constexpr auto operator[](clamp rhs) const noexcept -> handleᶠⁱⁿ<'R'>;
+		constexpr auto operator[](clamp rhs) /*&*/ noexcept -> handleᵐᵘᵗ<'R'>;
 
-		constexpr auto rbegin() const noexcept -> decltype(auto) requires (!codec<native>::is_stateful);
-		constexpr auto rend() const noexcept -> decltype(auto) requires (!codec<native>::is_stateful);
+		template <usize N = 3>
+		constexpr auto it() const noexcept -> std::tuple<windowᶠⁱⁿ<N>, usize>;
+		template <usize N = 3>
+		constexpr auto it() /*&*/ noexcept -> std::tuple<windowᵐᵘᵗ<N>, usize>;
 
-		constexpr auto rbegin() /*&*/ noexcept -> reverse_iterator requires (!codec<native>::is_stateful);
-		constexpr auto rend() /*&*/ noexcept -> reverse_iterator requires (!codec<native>::is_stateful);
+		constexpr auto operator=(auto&& rhs)& noexcept -> str& requires requires { txt {rhs}; };
+		constexpr auto operator=(auto&& rhs)&& noexcept -> str&& requires requires { txt {rhs}; };
 
-		// operators
-
-		template <typename string> requires requires (string&& _)
-		                                             { txt {_}; }
-		constexpr auto operator=(string&& rhs)& noexcept -> str&;
-		constexpr auto operator=(code_t   rhs)& noexcept -> str&;
-
-		template <typename string> requires requires (string&& _)
-		                                             { txt {_}; }
-		constexpr auto operator=(string&& rhs)&& noexcept -> str&&;
-		constexpr auto operator=(code_t   rhs)&& noexcept -> str&&;
-
-		template <typename string> requires requires (string&& _)
-		                                             { txt {_}; }
-		constexpr auto operator+=(string&& rhs)& noexcept -> str&;
-		constexpr auto operator+=(code_t   rhs)& noexcept -> str&;
-
-		template <typename string> requires requires (string&& _)
-		                                             { txt {_}; }
-		constexpr auto operator+=(string&& rhs)&& noexcept -> str&&;
-		constexpr auto operator+=(code_t   rhs)&& noexcept -> str&&;
+		constexpr auto operator+=(auto&& rhs)& noexcept -> str& requires requires { txt {rhs}; };
+		constexpr auto operator+=(auto&& rhs)&& noexcept -> str&& requires requires { txt {rhs}; };
 
 	private:
 
-		constexpr auto __init__() /*&*/ noexcept -> void;
-
-		// source of truth; returns SSO?
-		constexpr auto __mode__() const noexcept -> mode_t;
-
-		// out=ptr to buffer's 1st element.
-		constexpr auto __head__() const noexcept -> const unit_t*;
-		constexpr auto __head__() /*&*/ noexcept -> /*&*/ unit_t*;
-
-		// out=ptr to buffer's last element.
-		constexpr auto __tail__() const noexcept -> const unit_t*;
-		constexpr auto __tail__() /*&*/ noexcept -> /*&*/ unit_t*;
-
-		// out=ptr to buffer's last = capacity.
-		constexpr auto __last__() const noexcept -> const unit_t*;
-		constexpr auto __last__() /*&*/ noexcept -> /*&*/ unit_t*;
-
-		// invoke it after buffer manipulation.
-		constexpr auto __size__(size_t value) noexcept -> void;
-
-		typedef struct { unit_t* dest; bool does_shift;
-		                               bool does_alloc; } __insert__t;
-
-		// insert at position 2x capacity growth.
-		constexpr auto __insert__(unit_t* dest,
-		                          code_t  code,
-		                          int8_t  step) noexcept -> __insert__t;
-
-		class reader
+		template <char S> class handleᵐᵘᵗ : public handleᶠⁱⁿ<S>
 		{
-			typedef str self_t;
-			friend      self_t;
-
-			const self_t* src;
-			/*&*/ size_t  key;
+			str* src;
 
 		public:
 
-			constexpr reader
+			constexpr handleᵐᵘᵗ
 			(
-				decltype(src) src,
-				decltype(key) key
+				handleᶠⁱⁿ<S> _ctx,
+				decltype(src) _src
 			)
-			noexcept : src {src},
-			           key {key}
-			{}
+			noexcept : handleᶠⁱⁿ<S>(_ctx), src {_src} {}
 
-			   constexpr operator code_t() const noexcept;
-			// constexpr operator code_t() /*&*/ noexcept;
-
-			// constexpr auto operator=(code_t code) noexcept -> writer&;
-
-			constexpr auto operator==(code_t code) const noexcept -> bool;
-			constexpr auto operator!=(code_t code) const noexcept -> bool;
+			constexpr auto operator=(codeᵖᵗ rhs) noexcept -> handleᵐᵘᵗ&;
 		};
 
-		class writer
+		template <char S> class cursorᵐᵘᵗ : public cursorᶠⁱⁿ<S>
 		{
-			typedef str self_t;
-			friend      self_t;
-
-			/*&*/ self_t* src;
-			/*&*/ size_t  key;
+			str* src;
 
 		public:
 
-			constexpr writer
+			constexpr cursorᵐᵘᵗ
 			(
-				decltype(src) src,
-				decltype(key) key
+				cursorᶠⁱⁿ<S> _ctx,
+				decltype(src) _src
 			)
-			noexcept : src {src},
-			           key {key}
-			{}
+			noexcept : cursorᶠⁱⁿ<S>(_ctx), src {_src} {}
 
-			   constexpr operator code_t() const noexcept;
-			// constexpr operator code_t() /*&*/ noexcept;
-
-			constexpr auto operator=(code_t code) noexcept -> writer&;
-
-			constexpr auto operator==(code_t code) const noexcept -> bool;
-			constexpr auto operator!=(code_t code) const noexcept -> bool;
+			// constexpr auto operator=(codeᵖᵗ rhs) noexcept -> handleᵐᵘᵗ&;
 		};
 
-		template <typename alias,
-		          format_t trait> class cursor
+		template <usize N> class windowᵐᵘᵗ : public windowᶠⁱⁿ<N>
 		{
-			typedef str self_t;
-			friend      self_t;
+			str* src;
 
-			enum zero_t
-			{
-				HEAD,
-				TAIL,
-			};
-
-			class state
-			{
-				// nothing to do...
-
-			public:
-
-				self_t* target;
-				unit_t* anchor;
-
-				constexpr state
-				(
-					decltype(target) target,
-					decltype(anchor) anchor
-				)
-				noexcept : target {target},
-				           anchor {anchor}
-				{}
-			};
-
-			class proxy
-			{
-				std::shared_ptr<state> common;
-				unit_t*                needle;
-				zero_t                 policy;
-
-			public:
-
-				constexpr proxy
-				(
-					decltype(common) common,
-					decltype(needle) needle,
-					decltype(policy) policy
-				)
-				noexcept : common {common},
-				           needle {needle},
-				           policy {policy}
-				{}
-
-				   constexpr operator code_t() const noexcept;
-				// constexpr operator code_t() /*&*/ noexcept;
-
-				constexpr auto operator=(code_t code) noexcept -> proxy&;
-
-				constexpr auto operator==(code_t code) const noexcept -> bool;
-				constexpr auto operator!=(code_t code) const noexcept -> bool;
-			};
-
-			std::shared_ptr<state> common;
-			size_t                 offset;
-			size_t                 weight;
-			zero_t                 policy;
-
-			// std::views::reverse impl in Clang/GCC/MSVC:
-			//
-			// ┌─────────────────────────────────────────────────────┐
-			// │ template <typename iterator> class reverse_iterator │
-			// │ {                                                   │
-			// │     iterator current;                               │
-			// │                                                     │
-			// │     constexpr auto operator*() const -> value_type  │
-			// │     {                                               │
-			// │         iterator temporal {current};                │
-			// │                                                     │
-			// │         --temporal;                                 │
-			// │                                                     │
-			// │         return *temporal; // dangling               │
-			// │     }                                               │
-			// │ }                                                   │
-			// └─────────────────────────────────────────────────────┘
-			//
-			// due to proxy is made from temporal <it> clone
-			// self healing attempt that involves deref is UB
-			// →
-			// <std::shared_ptr> is perfect solution to this!
+			template <char S>        class handleᵃˡᵗ;
+			template <char S> friend class handleᵃˡᵗ;
 
 		public:
 
-			using iterator_category = std::conditional_t<codec<native>::is_stateful, std::forward_iterator_tag,
-			                                                                         std::bidirectional_iterator_tag>;
-
-			using iterator_concept = std::conditional_t<codec<native>::is_stateful, std::forward_iterator_tag,
-			                                                                        std::bidirectional_iterator_tag>;
-
-			using value_type = proxy;
-			using reference = proxy;
-
-			constexpr cursor
+			constexpr windowᵐᵘᵗ
 			(
-				decltype(common) common,
-				decltype(offset) offset,
-				decltype(weight) weight,
-				decltype(policy) policy
+				windowᶠⁱⁿ<N> _ctx,
+				decltype(src) _src
 			)
-			noexcept : common {common},
-			           offset {offset},
-			           weight {weight},
-			           policy {policy}
-			{};
+			noexcept : windowᶠⁱⁿ<N>(_ctx), src {_src} {}
 
-			// stl compat; convert into a ptr
-			constexpr operator const unit_t*() const noexcept;
-			constexpr operator const unit_t*() /*&*/ noexcept;
-
-			// stl compat; default constructible
-			constexpr  cursor() noexcept = default;
-			constexpr ~cursor() noexcept = default;
-
-			constexpr auto operator*() const noexcept -> value_type;
-
-			constexpr auto operator++(   ) noexcept -> alias&;
-			constexpr auto operator++(int) noexcept -> alias;
-			constexpr auto operator--(   ) noexcept -> alias&;
-			constexpr auto operator--(int) noexcept -> alias;
-
-			constexpr auto operator+(size_t value) noexcept -> alias;
-			constexpr auto operator-(size_t value) noexcept -> alias;
-
-			constexpr auto operator+=(size_t value) noexcept -> alias&;
-			constexpr auto operator-=(size_t value) noexcept -> alias&;
-
-			constexpr auto operator==(const cursor& rhs) const noexcept -> bool;
-			constexpr auto operator!=(const cursor& rhs) const noexcept -> bool;
+			constexpr auto operator[](usize rhs) noexcept -> handleᵃˡᵗ<'L'>;
+			constexpr auto operator[](magic rhs) noexcept -> handleᵃˡᵗ<'R'>;
+			constexpr auto operator[](clamp rhs) noexcept -> handleᵃˡᵗ<'R'>;
 
 		private:
 
-			constexpr auto __incr__() const noexcept -> int8_t;
-			constexpr auto __decr__() const noexcept -> int8_t;
-			constexpr auto __dest__() const noexcept -> unit_t*;
+			template <char S> class handleᵃˡᵗ : public handleᵐᵘᵗ<S>
+			{
+				windowᵐᵘᵗ* src;
+
+			public:
+
+				constexpr handleᵃˡᵗ
+				(
+					handleᵐᵘᵗ<S> _ctx,
+					decltype(src) _src
+				)
+				noexcept : handleᵐᵘᵗ<S>(_ctx), src {_src} {}
+
+				constexpr auto operator=(codeᵖᵗ rhs) noexcept -> handleᵃˡᵗ&;
+			};
 		};
-
-		class forward_iterator : public cursor<forward_iterator, "LTR">
-		{ using cursor<forward_iterator, "LTR">::cursor; /* inherit */ };
-
-		class reverse_iterator : public cursor<reverse_iterator, "RTL">
-		{ using cursor<reverse_iterator, "RTL">::cursor; /* inherit */ };
-	};
-
-	//┌───────┬────────────┬─────────────────┐
-	//│ owns? │ null-term? │ use-after-free? │
-	//├───────┼────────────┼─────────────────┤
-	//│   F   │   maybe?   │      [UB]       │
-	//└───────┴────────────┴─────────────────┘
-
-	template <format_t native> class txt final : public cable<native, txt<native>>
-	{
-		template <format_t,                  typename> friend class cable;
-		template <format_t, template <class> typename> friend class   str;
-		template <format_t                           > friend class   txt;
-
-		typedef typename codec<native>::unit_t unit_t;
-
-		const unit_t* head;
-		const unit_t* tail;
-
-		friend class reader;
-		friend class writer;
-
-		class forward_iterator; friend forward_iterator;
-		class reverse_iterator; friend reverse_iterator;
-
-	public:
-
-		constexpr txt
-		(
-			decltype(head) head,
-			decltype(tail) tail
-		)
-		noexcept : head {head},
-		           tail {tail}
-		{}
-
-		template <size_t N>
-		constexpr txt
-		(
-			const unit_t (&str)[N]
-		)
-		noexcept : head {&str[N - N]},
-		           tail {&str[N - 1]}
-		{}
-
-		template <size_t N>
-		constexpr txt
-		(
-			/*&*/ unit_t (&str)[N]
-		)
-		noexcept : head {&str[N - N]},
-		           tail {&str[N - 1]}
-		{}
-
-		template <template <class>
-		          typename malloc>
-		constexpr txt
-		(
-			const str<native, malloc>& str
-		)
-		noexcept : head {str.__head__()},
-		           tail {str.__tail__()}
-		{}
-
-		template <template <class>
-		          typename malloc>
-		constexpr txt
-		(
-			/*&*/ str<native, malloc>& str
-		)
-		noexcept : head {str.__head__()},
-		           tail {str.__tail__()}
-		{}
-
-		constexpr  txt() noexcept = delete;
-		constexpr ~txt() noexcept = default;
-
-		COPY_CONSTRUCTOR(txt) = default;
-		MOVE_CONSTRUCTOR(txt) = default;
-
-		COPY_ASSIGNMENT(txt) = default;
-		MOVE_ASSIGNMENT(txt) = default;
-
-		constexpr auto begin() const noexcept -> forward_iterator; // requires nothing; always active
-		constexpr auto end() const noexcept -> forward_iterator; // requires nothing; always active
-
-		constexpr auto rbegin() const noexcept -> reverse_iterator requires (!codec<native>::is_stateful);
-		constexpr auto rend() const noexcept -> reverse_iterator requires (!codec<native>::is_stateful);
-
-	private:
-
-		class reader
-		{
-			typedef txt self_t;
-			friend      self_t;
-
-			const self_t* src;
-			/*&*/ size_t  key;
-
-		public:
-
-			constexpr reader
-			(
-				decltype(src) src,
-				decltype(key) arg
-			)
-			noexcept : src {src},
-			           key {arg}
-			{}
-
-			   constexpr operator code_t() const noexcept;
-			// constexpr operator code_t() /*&*/ noexcept;
-
-			// constexpr auto operator=(code_t code) noexcept -> writer&;
-
-			constexpr auto operator==(code_t code) const noexcept -> bool;
-			constexpr auto operator!=(code_t code) const noexcept -> bool;
-		};
-
-		class writer
-		{
-			typedef txt self_t;
-			friend      self_t;
-
-			/*&*/ self_t* src;
-			/*&*/ size_t  key;
-
-		public:
-
-			constexpr writer
-			(
-				decltype(src) src,
-				decltype(key) arg
-			)
-			noexcept : src {src},
-			           key {arg}
-			{}
-
-			   constexpr operator code_t() const noexcept;
-			// constexpr operator code_t() /*&*/ noexcept;
-
-			// constexpr auto operator=(code_t code) noexcept -> writer&;
-
-			constexpr auto operator==(code_t code) const noexcept -> bool;
-			constexpr auto operator!=(code_t code) const noexcept -> bool;
-		};
-
-		template <typename alias,
-		          format_t trait> class cursor
-		{
-			const unit_t* ptr;
-
-		public:
-
-			using iterator_category = std::conditional_t<codec<native>::is_stateful, std::forward_iterator_tag,
-			                                                                         std::bidirectional_iterator_tag>;
-
-			using iterator_concept = std::conditional_t<codec<native>::is_stateful, std::forward_iterator_tag,
-			                                                                        std::bidirectional_iterator_tag>;
-
-			using value_type = code_t;
-			using reference = code_t;
-
-			constexpr cursor
-			(
-				decltype(ptr) ptr
-			)
-			noexcept : ptr {ptr}
-			{}
-
-			// stl compat; convert into a ptr
-			constexpr operator const unit_t*() const noexcept;
-			constexpr operator const unit_t*() /*&*/ noexcept;
-
-			// stl compat; default constructible
-			constexpr  cursor() noexcept = default;
-			constexpr ~cursor() noexcept = default;
-
-			constexpr auto operator*() const noexcept -> value_type;
-
-			constexpr auto operator++(   ) noexcept -> alias&;
-			constexpr auto operator++(int) noexcept -> alias;
-			constexpr auto operator--(   ) noexcept -> alias&;
-			constexpr auto operator--(int) noexcept -> alias;
-
-			constexpr auto operator+(size_t value) noexcept -> alias;
-			constexpr auto operator-(size_t value) noexcept -> alias;
-
-			constexpr auto operator+=(size_t value) noexcept -> alias&;
-			constexpr auto operator-=(size_t value) noexcept -> alias&;
-
-			constexpr auto operator==(const cursor& rhs) const noexcept -> bool = default;
-			constexpr auto operator!=(const cursor& rhs) const noexcept -> bool = default;
-
-		private:
-
-			constexpr auto __incr__() const noexcept -> int8_t;
-			constexpr auto __decr__() const noexcept -> int8_t;
-		};
-
-		class forward_iterator : public cursor<forward_iterator, "LTR">
-		{ using cursor<forward_iterator, "LTR">::cursor; /* inherit */ };
-
-		class reverse_iterator : public cursor<reverse_iterator, "RTL">
-		{ using cursor<reverse_iterator, "RTL">::cursor; /* inherit */ };
 	};
 
 	namespace detail
 	{
-		template <format_t source> static constexpr auto __units__(const typename codec<source>::unit_t* head,
-		                                                           const typename codec<source>::unit_t* tail) noexcept -> size_t;
+		template <typename Fᵒᵘᵗ> static constexpr auto ΔCU(const typename Fᵒᵘᵗ::codeᵘᵗ* head,
+		                                                   const typename Fᵒᵘᵗ::codeᵘᵗ* tail) noexcept -> usize;
 
-		template <format_t source> static constexpr auto __codes__(const typename codec<source>::unit_t* head,
-		                                                           const typename codec<source>::unit_t* tail) noexcept -> size_t;
+		template <typename Fᵒᵘᵗ> static constexpr auto ΔCP(const typename Fᵒᵘᵗ::codeᵘᵗ* head,
+		                                                   const typename Fᵒᵘᵗ::codeᵘᵗ* tail) noexcept -> usize;
 
-		template <format_t source,
-		          format_t target> static constexpr auto __fcopy__(/*&*/ typename codec<target>::unit_t* dest,
-		                                                           const typename codec<source>::unit_t* head,
-		                                                           const typename codec<source>::unit_t* tail) noexcept -> size_t;
+		template <typename Fᵒᵘᵗ,
+		          typename Fˢʳᶜ> static constexpr auto ΔCU(const typename Fˢʳᶜ::codeᵘᵗ* head,
+		                                                   const typename Fˢʳᶜ::codeᵘᵗ* tail) noexcept -> usize;
 
-		template <format_t target> static constexpr auto __fcopy__(/*&*/ typename codec<target>::unit_t* dest,
-		                                                           code_t                                code) noexcept -> size_t;
+		template <typename Fᵒᵘᵗ,
+		          typename Fˢʳᶜ> static constexpr auto copy(typename Fᵒᵘᵗ::codeᵘᵗ* dest, const typename Fˢʳᶜ::codeᵘᵗ* head,
+		                                                                                 const typename Fˢʳᶜ::codeᵘᵗ* tail) noexcept -> usize;
 
-		template <format_t source,
-		          format_t target> static constexpr auto __rcopy__(/*&*/ typename codec<target>::unit_t* dest,
-		                                                           const typename codec<source>::unit_t* head,
-		                                                           const typename codec<source>::unit_t* tail) noexcept -> size_t;
+		template <typename Fˡʰˢ,
+		          typename Fʳʰˢ> static constexpr auto equal(const typename Fˡʰˢ::codeᵘᵗ* lhs0, const typename Fˡʰˢ::codeᵘᵗ* lhsN,
+		                                                     const typename Fʳʰˢ::codeᵘᵗ* rhs0, const typename Fʳʰˢ::codeᵘᵗ* rhsN) noexcept -> bool;
 
-		template <format_t target> static constexpr auto __rcopy__(/*&*/ typename codec<target>::unit_t* dest,
-		                                                           code_t                                code) noexcept -> size_t;
+		template <typename Fˡʰˢ,
+		          typename Fʳʰˢ> static constexpr auto swith(const typename Fˡʰˢ::codeᵘᵗ* lhs0, const typename Fˡʰˢ::codeᵘᵗ* lhsN,
+		                                                     const typename Fʳʰˢ::codeᵘᵗ* rhs0, const typename Fʳʰˢ::codeᵘᵗ* rhsN) noexcept -> bool;
 
-		template <format_t source,
-		          format_t target> static constexpr auto __equal__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
-		                                                           const typename codec<target>::unit_t* rhs0, const typename codec<target>::unit_t* rhsN) noexcept -> bool;
+		template <typename Fˡʰˢ,
+		          typename Fʳʰˢ> static constexpr auto ewith(const typename Fˡʰˢ::codeᵘᵗ* lhs0, const typename Fˡʰˢ::codeᵘᵗ* lhsN,
+		                                                     const typename Fʳʰˢ::codeᵘᵗ* rhs0, const typename Fʳʰˢ::codeᵘᵗ* rhsN) noexcept -> bool;
 
-		template <format_t source> static constexpr auto __equal__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
-		                                                           code_t                                                                            code) noexcept -> bool;
+		template <typename Fˡʰˢ,
+		          typename Fʳʰˢ> static constexpr auto holds(const typename Fˡʰˢ::codeᵘᵗ* lhs0, const typename Fˡʰˢ::codeᵘᵗ* lhsN,
+		                                                     const typename Fʳʰˢ::codeᵘᵗ* rhs0, const typename Fʳʰˢ::codeᵘᵗ* rhsN) noexcept -> bool;
 
-		template <format_t source,
-		          format_t target> static constexpr auto __nqual__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
-		                                                           const typename codec<target>::unit_t* rhs0, const typename codec<target>::unit_t* rhsN) noexcept -> bool;
+		template <typename Fˡʰˢ,
+		          typename Fʳʰˢ> static constexpr auto split(const typename Fˡʰˢ::codeᵘᵗ* lhs0, const typename Fˡʰˢ::codeᵘᵗ* lhsN,
+		                                                     const typename Fʳʰˢ::codeᵘᵗ* rhs0, const typename Fʳʰˢ::codeᵘᵗ* rhsN) noexcept -> std::vector<txt<Fˡʰˢ>>;
 
-		template <format_t source> static constexpr auto __nqual__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
-		                                                           code_t                                                                            code) noexcept -> bool;
+		template <typename Fˡʰˢ,
+		          typename Fʳʰˢ> static constexpr auto match(const typename Fˡʰˢ::codeᵘᵗ* lhs0, const typename Fˡʰˢ::codeᵘᵗ* lhsN,
+		                                                     const typename Fʳʰˢ::codeᵘᵗ* rhs0, const typename Fʳʰˢ::codeᵘᵗ* rhsN) noexcept -> std::vector<txt<Fˡʰˢ>>;
 
-		template <format_t source,
-		          format_t target> static constexpr auto __split__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
-		                                                           const typename codec<target>::unit_t* rhs0, const typename codec<target>::unit_t* rhsN) noexcept -> std::vector<txt<source>>;
+		template <typename Fˡʰˢ,
+		          typename Fʳʰˢ> static constexpr auto search(const typename Fˡʰˢ::codeᵘᵗ* lhs0, const typename Fˡʰˢ::codeᵘᵗ* lhsN,
+		                                                      const typename Fʳʰˢ::codeᵘᵗ* rhs0, const typename Fʳʰˢ::codeᵘᵗ* rhsN, auto&& fn)
+		// info {error-free} & {interface}
+		noexcept(std::is_nothrow_invocable_v<decltype(fn), const typename Fʳʰˢ::codeᵘᵗ*,
+		                                                   const typename Fʳʰˢ::codeᵘᵗ*>) -> void requires (std::is_invocable_r_v<bool, decltype(fn), const typename Fʳʰˢ::codeᵘᵗ*,
+		                                                                                                                                              const typename Fʳʰˢ::codeᵘᵗ*>);
 
-		template <format_t source> static constexpr auto __split__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
-		                                                           code_t                                                                            code) noexcept -> std::vector<txt<source>>;
+		template <typename Fᵒᵘᵗ> static constexpr auto substr(const typename Fᵒᵘᵗ::codeᵘᵗ* head, const typename Fᵒᵘᵗ::codeᵘᵗ* tail, usize off) noexcept -> decltype(head);
+		template <typename Fᵒᵘᵗ> static constexpr auto substr(/*&*/ typename Fᵒᵘᵗ::codeᵘᵗ* head, /*&*/ typename Fᵒᵘᵗ::codeᵘᵗ* tail, usize off) noexcept -> decltype(head);
 
-		template <format_t source,
-		          format_t target> static constexpr auto __match__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
-		                                                           const typename codec<target>::unit_t* rhs0, const typename codec<target>::unit_t* rhsN) noexcept -> std::vector<txt<source>>;
+		template <typename Fᵒᵘᵗ> static constexpr auto substr(const typename Fᵒᵘᵗ::codeᵘᵗ* head, const typename Fᵒᵘᵗ::codeᵘᵗ* tail, magic off) noexcept -> decltype(head);
+		template <typename Fᵒᵘᵗ> static constexpr auto substr(/*&*/ typename Fᵒᵘᵗ::codeᵘᵗ* head, /*&*/ typename Fᵒᵘᵗ::codeᵘᵗ* tail, magic off) noexcept -> decltype(head);
 
-		template <format_t source> static constexpr auto __match__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
-		                                                           code_t                                                                            code) noexcept -> std::vector<txt<source>>;
+		template <typename Fᵒᵘᵗ> static constexpr auto substr(const typename Fᵒᵘᵗ::codeᵘᵗ* head, const typename Fᵒᵘᵗ::codeᵘᵗ* tail, clamp off) noexcept -> decltype(head);
+		template <typename Fᵒᵘᵗ> static constexpr auto substr(/*&*/ typename Fᵒᵘᵗ::codeᵘᵗ* head, /*&*/ typename Fᵒᵘᵗ::codeᵘᵗ* tail, clamp off) noexcept -> decltype(head);
 
-		template <format_t source,
-		          format_t target> static constexpr auto __holds__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
-		                                                           const typename codec<target>::unit_t* rhs0, const typename codec<target>::unit_t* rhsN) noexcept -> bool;
+		   template <typename Fᵒᵘᵗ> static constexpr auto substr(const typename Fᵒᵘᵗ::codeᵘᵗ* head, const typename Fᵒᵘᵗ::codeᵘᵗ* tail, clamp beg, clamp end) noexcept -> txt<Fᵒᵘᵗ>;
+		// template <typename Fᵒᵘᵗ> static constexpr auto substr(/*&*/ typename Fᵒᵘᵗ::codeᵘᵗ* head, /*&*/ typename Fᵒᵘᵗ::codeᵘᵗ* tail, clamp beg, clamp end) noexcept -> txt<Fᵒᵘᵗ>;
 
-		template <format_t source> static constexpr auto __holds__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
-		                                                           code_t                                                                            code) noexcept -> bool;
+		   template <typename Fᵒᵘᵗ> static constexpr auto substr(const typename Fᵒᵘᵗ::codeᵘᵗ* head, const typename Fᵒᵘᵗ::codeᵘᵗ* tail, clamp beg, magic end) noexcept -> txt<Fᵒᵘᵗ>;
+		// template <typename Fᵒᵘᵗ> static constexpr auto substr(/*&*/ typename Fᵒᵘᵗ::codeᵘᵗ* head, /*&*/ typename Fᵒᵘᵗ::codeᵘᵗ* tail, clamp beg, magic end) noexcept -> txt<Fᵒᵘᵗ>;
 
-		template <format_t source,
-		          format_t target> static constexpr auto __swith__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
-		                                                           const typename codec<target>::unit_t* rhs0, const typename codec<target>::unit_t* rhsN) noexcept -> bool;
+		   template <typename Fᵒᵘᵗ> static constexpr auto substr(const typename Fᵒᵘᵗ::codeᵘᵗ* head, const typename Fᵒᵘᵗ::codeᵘᵗ* tail, usize beg, clamp end) noexcept -> txt<Fᵒᵘᵗ>;
+		// template <typename Fᵒᵘᵗ> static constexpr auto substr(/*&*/ typename Fᵒᵘᵗ::codeᵘᵗ* head, /*&*/ typename Fᵒᵘᵗ::codeᵘᵗ* tail, usize beg, clamp end) noexcept -> txt<Fᵒᵘᵗ>;
 
-		template <format_t source> static constexpr auto __swith__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
-		                                                           code_t                                                                            code) noexcept -> bool;
+		   template <typename Fᵒᵘᵗ> static constexpr auto substr(const typename Fᵒᵘᵗ::codeᵘᵗ* head, const typename Fᵒᵘᵗ::codeᵘᵗ* tail, usize beg, magic end) noexcept -> txt<Fᵒᵘᵗ>;
+		// template <typename Fᵒᵘᵗ> static constexpr auto substr(/*&*/ typename Fᵒᵘᵗ::codeᵘᵗ* head, /*&*/ typename Fᵒᵘᵗ::codeᵘᵗ* tail, usize beg, magic end) noexcept -> txt<Fᵒᵘᵗ>;
 
-		template <format_t source,
-		          format_t target> static constexpr auto __ewith__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
-		                                                           const typename codec<target>::unit_t* rhs0, const typename codec<target>::unit_t* rhsN) noexcept -> bool;
-
-		template <format_t source> static constexpr auto __ewith__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
-		                                                           code_t                                                                            code) noexcept -> bool;
-
-		template <format_t source> static constexpr auto __substr__(const typename codec<source>::unit_t* head, const typename codec<source>::unit_t* tail,
-		                                                            clamp                                 from, clamp                                 dest) noexcept -> txt<source>;
-
-		template <format_t source> static constexpr auto __substr__(const typename codec<source>::unit_t* head, const typename codec<source>::unit_t* tail,
-		                                                            clamp                                 from, range                                 dest) noexcept -> txt<source>;
-
-		template <format_t source> static constexpr auto __substr__(const typename codec<source>::unit_t* head, const typename codec<source>::unit_t* tail,
-		                                                            size_t                                from, clamp                                 dest) noexcept -> txt<source>;
-
-		template <format_t source> static constexpr auto __substr__(const typename codec<source>::unit_t* head, const typename codec<source>::unit_t* tail,
-		                                                            size_t                                from, range                                 dest) noexcept -> txt<source>;
-
-		template <format_t source> static constexpr auto __substr__(const typename codec<source>::unit_t* head, const typename codec<source>::unit_t* tail,
-		                                                            size_t                                from, size_t                                dest) noexcept -> txt<source>;
-
-		template <format_t source,
-		          format_t target> static constexpr auto __search__(const typename codec<source>::unit_t* lhs0, const typename codec<source>::unit_t* lhsN,
-		                                                            const typename codec<target>::unit_t* rhs0, const typename codec<target>::unit_t* rhsN,
-		                                                            const auto& /* (const source::unit_t* head, const source::unit_t* tail) -> VOID */ fun) noexcept -> void;
+		   template <typename Fᵒᵘᵗ> static constexpr auto substr(const typename Fᵒᵘᵗ::codeᵘᵗ* head, const typename Fᵒᵘᵗ::codeᵘᵗ* tail, usize beg, usize end) noexcept -> txt<Fᵒᵘᵗ>;
+		// template <typename Fᵒᵘᵗ> static constexpr auto substr(/*&*/ typename Fᵒᵘᵗ::codeᵘᵗ* head, /*&*/ typename Fᵒᵘᵗ::codeᵘᵗ* tail, usize beg, usize end) noexcept -> txt<Fᵒᵘᵗ>;
 	};
 
-#pragma region iostream
-
-	template <typename string> requires requires (string&& _)
-	                                             { txt {_}; }
-	inline auto operator<<(std::ostream& os, string&& value) noexcept -> decltype(auto)
+	inline auto operator<<(std::ostream& os, auto&& rval) noexcept -> std::ostream& requires requires { txt {rval}; }
 	{
-		for (const code_t code : txt {value})
+		typedef decltype(os) forward_t;
+	
+		for (const auto code : txt {rval})
 		{
-			/*global*/::operator<<(os, code);
+			::operator<<(os, code);
 		}
-		return std::forward<decltype(os)>(os);
+		return std::forward<forward_t>(os);
 	}
-
-	template <typename string> requires requires (string&& _)
-	                                             { txt {_}; }
-	inline auto operator<<(std::istream& is, string&& value) noexcept -> decltype(auto)
+	
+	inline auto operator<<(std::istream& is, auto&& rval) noexcept -> std::istream& requires requires { txt {rval}; }
 	{
-		for (const code_t code : txt {value})
+		typedef decltype(is) forward_t;
+	
+		for (const auto code : txt {rval})
 		{
-			/*global*/::operator>>(is, code);
+			::operator>>(is, code);
 		}
-		return std::forward<decltype(is)>(is);
+		return std::forward<forward_t>(is);
 	}
 
-#pragma endregion iostream
-#pragma region character
-
-	constexpr code_t::operator char32_t() const noexcept
+	template <template <typename> typename Aˀ = std::allocator> static auto fileof(auto&& path) noexcept -> std::optional
+	                                                                                                        <
+	                                                                                                        	std::variant
+	                                                                                                        	<
+	                                                                                                        		str<UTF_8, Aˀ>
+	                                                                                                        		,
+	                                                                                                        		str<UTF_16, Aˀ>
+	                                                                                                        		,
+	                                                                                                        		str<UTF_32, Aˀ>
+	                                                                                                        	>
+	                                                                                                        >
 	{
-		return this->arg;
-	}
-
-	constexpr code_t::operator char32_t() /*&*/ noexcept
-	{
-		return this->arg;
-	}
-
-#pragma endregion character
-#pragma region filesystem
-
-	template <typename STRING> /*&*/ auto fileof(const STRING& path) noexcept -> std::optional
-	                                                                             <
-	                                                                             	std::variant
-	                                                                             	<
-	                                                                             		str<"UTF-8">
-	                                                                             		,
-	                                                                             		str<"UTF-16">
-	                                                                             		,
-	                                                                             		str<"UTF-32">
-	                                                                             	>
-	                                                                             >
-	{
-		enum encoding : uint8_t
+		enum encode : u8
 		{
 			UTF8_STD = (0 << 4) | 0,
 			UTF8_BOM = (1 << 4) | 3,
@@ -1063,77 +916,83 @@ namespace x69
 			UTF32_LE = (5 << 4) | 4,
 		};
 
-		static const auto byte_order_mask {[](std::ifstream& ifs) -> encoding
+		constexpr auto byte_order_mask = [](std::ifstream& ifs) -> std::tuple<encode, usize>
 		{
 			char buffer[4];
 
-			ifs.seekg(0, std::ios::beg); // move to the beginning of the file #A
+			ifs.seekg(0, std::ios::beg); // 1. move to the beginning of the file
 			ifs.read(&buffer[0], 4); const auto bytes {ifs.gcount()}; ifs.clear();
-			ifs.seekg(0, std::ios::beg); // move to the beginning of the file #B
+			ifs.seekg(0, std::ios::beg); // 2. move to the beginning of the file
 
-			// 00 00 FE FF
-			if (4 <= bytes
-			    &&
-			    buffer[0] == '\x00'
-			    &&
-			    buffer[1] == '\x00'
-			    &&
-			    buffer[2] == '\xFE'
-			    &&
-			    buffer[3] == '\xFF') [[unlikely]] return UTF32_BE;
+			switch (bytes)
+			{
+				case 4: [[unlikely]]
+				{
+					// 00 00 FE FF
+					if (buffer[0] == '\x00'
+					    &&
+					    buffer[1] == '\x00'
+					    &&
+					    buffer[2] == '\xFE'
+					    &&
+					    buffer[3] == '\xFF') [[unlikely]] return {UTF32_BE, UTF32_BE & 0xF};
 
-			// FF FE 00 00
-			if (4 <= bytes
-			    &&
-			    buffer[0] == '\xFF'
-			    &&
-			    buffer[1] == '\xFE'
-			    &&
-			    buffer[2] == '\x00'
-			    &&
-			    buffer[3] == '\x00') [[unlikely]] return UTF32_LE;
+					// FF FE 00 00
+					if (buffer[0] == '\xFF'
+					    &&
+					    buffer[1] == '\xFE'
+					    &&
+					    buffer[2] == '\x00'
+					    &&
+					    buffer[3] == '\x00') [[unlikely]] return {UTF32_LE, UTF32_LE & 0xF};
 
-			// FE FF
-			if (2 <= bytes
-			    &&
-			    buffer[0] == '\xFE'
-			    &&
-			    buffer[1] == '\xFF') [[unlikely]] return UTF16_BE;
+					[[fallthrough]];
+				}
+				case 2: [[unlikely]]
+				{
+					// FE FF
+					if (buffer[0] == '\xFE'
+					    &&
+					    buffer[1] == '\xFF') [[unlikely]] return {UTF16_BE, UTF16_BE & 0xF};
 
-			// FF FE
-			if (2 <= bytes
-			    &&
-			    buffer[0] == '\xFF'
-			    &&
-			    buffer[1] == '\xFE') [[unlikely]] return UTF16_LE;
+					// FF FE
+					if (buffer[0] == '\xFF'
+					    &&
+					    buffer[1] == '\xFE') [[unlikely]] return {UTF16_LE, UTF16_LE & 0xF};
 
-			// EF BB BF
-			if (3 <= bytes
-			    &&
-			    buffer[0] == '\xEF'
-			    &&
-			    buffer[1] == '\xBB'
-			    &&
-			    buffer[2] == '\xBF') [[unlikely]] return UTF8_BOM;
+					[[fallthrough]];
+				}
+				case 3: [[unlikely]]
+				{
+					// EF BB BF
+					if (buffer[0] == '\xEF'
+					    &&
+					    buffer[1] == '\xBB'
+					    &&
+					    buffer[2] == '\xBF') [[unlikely]] return {UTF8_BOM, UTF8_BOM & 0xF};
 
-			return UTF8_STD;
-		}};
+					[[fallthrough]];
+				}
+			}
+			//     (BOM-less UTF-8 encoding?)
+			return {UTF8_STD, UTF8_STD & 0xF};
+		};
 
-		static const auto write_as_native {[]<format_t native>(std::ifstream& ifs, str<native>& str) -> void
+		constexpr auto write_as_native = []<typename Fˀ>(std::ifstream& ifs, str<Fˀ, Aˀ>& out)
 		{
-			   typedef typename codec<native>::unit_t T;
-			// typedef typename codec<exotic>::unit_t U;
+			   typedef typename Fˀ::codeᵘᵗ unitˣ;
+			// typedef typename Fᵞ::codeᵘᵗ unitᵞ;
 
-			T buffer;
+			unitˣ buffer;
 
-			T* dest {str.__head__()};
-			T* head {str.__head__()};
+			unitˣ* /*&*/ dest {out._head()};
+			unitˣ* const head {out._head()};
 
-			while (ifs.read(reinterpret_cast<char*>(&buffer), sizeof(T)))
+			while (ifs.read(reinterpret_cast<char*>(&buffer), sizeof(unitˣ)))
 			{
 				if (buffer == '\r'
 				    &&
-				    ifs.read(reinterpret_cast<char*>(&buffer), sizeof(T))
+				    ifs.read(reinterpret_cast<char*>(&buffer), sizeof(unitˣ))
 				    &&
 				    buffer != '\n')
 				{
@@ -1141,24 +1000,24 @@ namespace x69
 				}
 				*(dest++) = buffer;
 			}
-			str.__size__(dest - head);
-		}};
+			out._SSOᴺ(dest - head);
+		};
 
-		static const auto write_as_exotic {[]<format_t native>(std::ifstream& ifs, str<native>& str) -> void
+		constexpr auto write_as_exotic = []<typename Fˀ>(std::ifstream& ifs, str<Fˀ, Aˀ>& out)
 		{
-			   typedef typename codec<native>::unit_t T;
-			// typedef typename codec<exotic>::unit_t U;
+			   typedef typename Fˀ::codeᵘᵗ unitˣ;
+			// typedef typename Fᵞ::codeᵘᵗ unitᵞ;
 
-			T buffer;
+			unitˣ buffer;
 
-			T* dest {str.__head__()};
-			T* head {str.__head__()};
+			unitˣ* /*&*/ dest {out._head()};
+			unitˣ* const head {out._head()};
 
-			while (ifs.read(reinterpret_cast<char*>(&buffer), sizeof(T)))
+			while (ifs.read(reinterpret_cast<char*>(&buffer), sizeof(unitˣ)))
 			{
 				if ((buffer = std::byteswap(buffer)) == '\r'
 				    &&
-				    ifs.read(reinterpret_cast<char*>(&buffer), sizeof(T))
+				    ifs.read(reinterpret_cast<char*>(&buffer), sizeof(unitˣ))
 				    &&
 				    (buffer = std::byteswap(buffer)) != '\n')
 				{
@@ -1166,157 +1025,136 @@ namespace x69
 				}
 				*(dest++) = buffer;
 			}
-			str.__size__(dest - head);
-		}};
+			out._SSOᴺ(dest - head);
+		};
 
-		const std::filesystem::path fs {std::invoke([&]
+		if (std::ifstream ifs {path, std::ios::binary})
 		{
-			typedef std::string cstr_t;
-			typedef decltype(fs) file_t;
-
-			// constructible on the fly
-			if constexpr (std::is_constructible_v<file_t, STRING>)
-			{
-				return path;
-			}
-			// at least convertible to cstr_t!
-			else if constexpr (std::is_convertible_v<STRING, cstr_t>)
-			{
-				return static_cast<cstr_t>(path);
-			}
-			// at least convertible to file_t!
-			else if constexpr (std::is_convertible_v<STRING, file_t>)
-			{
-				return static_cast<file_t>(path);
-			}
-			// ...constexpr failuare! DEAD-END!
-			else static_assert(!"ERROR! call to 'fileof' is ambigious");
-		})};
-
-		if (std::ifstream ifs {fs, std::ios::binary})
-		{
-			const auto BOM {byte_order_mask(ifs)};
-			const auto off {BOM & 0xF /* ..?? */};
-
-			size_t max;
+			const auto [BOM, off] {byte_order_mask(ifs)};
 
 			// to the BOM
-			ifs.seekg(off, std::ios::beg); max = ifs.tellg() - static_cast<std::streamoff>(0x0);
+			ifs.seekg(off, std::ios::beg); const auto beg {ifs.tellg()};
 			// to the END
-			ifs.seekg(0x0, std::ios::end); max = ifs.tellg() - static_cast<std::streamoff>(max);
+			ifs.seekg(0x0, std::ios::end); const auto end {ifs.tellg()};
 			// to the BOM
-			ifs.seekg(off, std::ios::beg); // BOM offset calculation is done above, now rest...
+			ifs.seekg(off, std::ios::beg); const auto max {end - beg};
 
 			switch (BOM)
 			{
 				case UTF8_STD:
 				{
-					str<"UTF-8"> str;
+					str<UTF_8, Aˀ> out;
 
-					str.capacity(max / sizeof(typename decltype(str)::unit_t));
+					out.spare(max / sizeof(typename decltype(out)::unit));
 
-					/* UTF-8 is endian insensitive */ write_as_native(ifs, str);
+					/* 📚 endian insensitive */ write_as_native(ifs, out);
 
-					return str;
+					return {out};
 				}
 				case UTF8_BOM:
 				{
-					str<"UTF-8"> str;
+					str<UTF_8, Aˀ> out;
 
-					str.capacity(max / sizeof(typename decltype(str)::unit_t));
+					out.spare(max / sizeof(typename decltype(out)::unit));
 
-					/* UTF-8 is endian insensitive */ write_as_native(ifs, str);
+					/* 📚 endian insensitive */ write_as_native(ifs, out);
 
-					return str;
+					return {out};
 				}
 				case UTF16_LE:
 				{
-					str<"UTF-16"> str;
+					str<UTF_16, Aˀ> out;
 
-					str.capacity(max / sizeof(typename decltype(str)::unit_t));
+					out.spare(max / sizeof(typename decltype(out)::unit));
 
-					if constexpr (std::endian::native == std::endian::little) write_as_native(ifs, str);
-					                                                     else write_as_exotic(ifs, str);
+					if constexpr (std::endian::native == std::endian::little) write_as_native(ifs, out);
+					                                                     else write_as_exotic(ifs, out);
 
-					return str;
+					return {out};
 				}
 				case UTF16_BE:
 				{
-					str<"UTF-16"> str;
+					str<UTF_16, Aˀ> out;
 
-					str.capacity(max / sizeof(typename decltype(str)::unit_t));
+					out.spare(max / sizeof(typename decltype(out)::unit));
 
-					if constexpr (std::endian::native == std::endian::big) write_as_native(ifs, str);
-					                                                  else write_as_exotic(ifs, str);
+					if constexpr (std::endian::native == std::endian::big) write_as_native(ifs, out);
+					                                                  else write_as_exotic(ifs, out);
 
-					return str;
+					return {out};
 				}
 				case UTF32_LE:
 				{
-					str<"UTF-32"> str;
+					str<UTF_32, Aˀ> out;
 
-					str.capacity(max / sizeof(typename decltype(str)::unit_t));
+					out.spare(max / sizeof(typename decltype(out)::unit));
 
-					if constexpr (std::endian::native == std::endian::little) write_as_native(ifs, str);
-					                                                     else write_as_exotic(ifs, str);
+					if constexpr (std::endian::native == std::endian::little) write_as_native(ifs, out);
+					                                                     else write_as_exotic(ifs, out);
 
-					return str;
+					return {out};
 				}
 				case UTF32_BE:
 				{
-					str<"UTF-32"> str;
+					str<UTF_32, Aˀ> out;
 
-					str.capacity(max / sizeof(typename decltype(str)::unit_t));
+					out.spare(max / sizeof(typename decltype(out)::unit));
 
-					if constexpr (std::endian::native == std::endian::big) write_as_native(ifs, str);
-					                                                  else write_as_exotic(ifs, str);
+					if constexpr (std::endian::native == std::endian::big) write_as_native(ifs, out);
+					                                                  else write_as_exotic(ifs, out);
 
-					return str;
+					return {out};
 				}
 			}
 		}
 		return std::nullopt;
 	}
 
-#pragma endregion filesystem
+	typedef str<ASCII> strˀ;
+	typedef str<UTF_8> str8;
+	typedef str<UTF_16> str16;
+	typedef str<UTF_32> str32;
 
-	typedef str<"UTF-8"> str8;
-	typedef str<"UTF-16"> str16;
-	typedef str<"UTF-32"> str32;
+	str(char&) -> str<ASCII>;
+	str(char8_t&) -> str<UTF_8>;
+	str(char16_t&) -> str<UTF_16>;
+	str(char32_t&) -> str<UTF_32>;
 
-	typedef txt<"UTF-8"> txt8;
-	typedef txt<"UTF-16"> txt16;
-	typedef txt<"UTF-32"> txt32;
+	typedef txt<ASCII> txtˀ;
+	typedef txt<UTF_8> txt8;
+	typedef txt<UTF_16> txt16;
+	typedef txt<UTF_32> txt32;
 
-	template <size_t N> str(const char8_t (&)[N]) -> str<"UTF-8">;
-	template <size_t N> str(const char16_t (&)[N]) -> str<"UTF-16">;
-	template <size_t N> str(const char32_t (&)[N]) -> str<"UTF-32">;
+	txt(char&) -> txt<ASCII>;
+	txt(char8_t&) -> txt<UTF_8>;
+	txt(char16_t&) -> txt<UTF_16>;
+	txt(char32_t&) -> txt<UTF_32>;
 
-	template <size_t N> txt(const char8_t (&)[N]) -> txt<"UTF-8">;
-	template <size_t N> txt(const char16_t (&)[N]) -> txt<"UTF-16">;
-	template <size_t N> txt(const char32_t (&)[N]) -> txt<"UTF-32">;
+	template <usize N> str(const char (&)[N]) -> str<ASCII>;
+	template <usize N> str(const char8_t (&)[N]) -> str<UTF_8>;
+	template <usize N> str(const char16_t (&)[N]) -> str<UTF_16>;
+	template <usize N> str(const char32_t (&)[N]) -> str<UTF_32>;
+
+	template <usize N> txt(const char (&)[N]) -> txt<ASCII>;
+	template <usize N> txt(const char8_t (&)[N]) -> txt<UTF_8>;
+	template <usize N> txt(const char16_t (&)[N]) -> txt<UTF_16>;
+	template <usize N> txt(const char32_t (&)[N]) -> txt<UTF_32>;
 }
 
-// NOLINTBEGIN(unused-includes)
+#include "impl/📦.inl"
 
-#include "./private/cable.inl"
-#include "./private/detail.inl"
+#include "impl/str.inl"
+#include "impl/txt.inl"
 
-#include "./private/str.inl"
-#include "./private/txt.inl"
+#include "impl/🧲/UTF8.inl"
+#include "impl/🧲/UTF16.inl"
+#include "impl/🧲/UTF32.inl"
+#include "impl/🧲/ASCII.inl"
 
-#include "./private/codec/ASCII.inl"
-#include "./private/codec/UTF8.inl"
-#include "./private/codec/UTF16.inl"
-#include "./private/codec/UTF32.inl"
-
-// NOLINTEND(unused-includes)
-
-#undef COPY_ASSIGNMENT
-#undef MOVE_ASSIGNMENT
-
-#undef COPY_CONSTRUCTOR
-#undef MOVE_CONSTRUCTOR
+inline auto operator>>(std::istream& is, char32_t code) noexcept -> std::istream&
+{
+	// TODO
+}
 
 inline auto operator<<(std::ostream& os, char32_t code) noexcept -> std::ostream&
 {
@@ -1347,75 +1185,51 @@ inline auto operator<<(std::ostream& os, char32_t code) noexcept -> std::ostream
 	return os.write(out, unit);
 }
 
-constexpr auto operator ""_str(const char8_t* ptr, size_t len) noexcept -> x69::str8
+inline auto operator>>(std::istream& is, x69::codeᵖᵗ code) noexcept -> std::istream&
+{
+	return is >> static_cast<char32_t>(code);
+}
+inline auto operator<<(std::ostream& os, x69::codeᵖᵗ code) noexcept -> std::ostream&
+{
+	return os << static_cast<char32_t>(code);
+}
+
+constexpr auto operator ""_str(const char* ptr, x69::usize len) noexcept -> x69::strˀ
+{
+	return {x69::txtˀ {ptr, ptr + len}};
+}
+
+constexpr auto operator ""_txt(const char* ptr, x69::usize len) noexcept -> x69::txtˀ
+{
+	return {ptr, ptr + len};
+}
+
+constexpr auto operator ""_str(const char8_t* ptr, x69::usize len) noexcept -> x69::str8
 {
 	return {x69::txt8 {ptr, ptr + len}};
 }
 
-constexpr auto operator ""_txt(const char8_t* ptr, size_t len) noexcept -> x69::txt8
+constexpr auto operator ""_txt(const char8_t* ptr, x69::usize len) noexcept -> x69::txt8
 {
 	return {ptr, ptr + len};
 }
 
-constexpr auto operator ""_str(const char16_t* ptr, size_t len) noexcept -> x69::str16
+constexpr auto operator ""_str(const char16_t* ptr, x69::usize len) noexcept -> x69::str16
 {
 	return {x69::txt16 {ptr, ptr + len}};
 }
 
-constexpr auto operator ""_txt(const char16_t* ptr, size_t len) noexcept -> x69::txt16
+constexpr auto operator ""_txt(const char16_t* ptr, x69::usize len) noexcept -> x69::txt16
 {
 	return {ptr, ptr + len};
 }
 
-constexpr auto operator ""_str(const char32_t* ptr, size_t len) noexcept -> x69::str32
+constexpr auto operator ""_str(const char32_t* ptr, x69::usize len) noexcept -> x69::str32
 {
 	return {x69::txt32 {ptr, ptr + len}};
 }
 
-constexpr auto operator ""_txt(const char32_t* ptr, size_t len) noexcept -> x69::txt32
+constexpr auto operator ""_txt(const char32_t* ptr, x69::usize len) noexcept -> x69::txt32
 {
 	return {ptr, ptr + len};
 }
-
-template <x69::format_t native,
-          /*&*/template <class>
-          /*&*/typename malloc> struct std::hash<x69::str<native,
-                                                          malloc>>
-{
-	constexpr auto operator()(const x69::str<native,
-                                             malloc>& str) const noexcept -> size_t
-	{
-		int seed {0};
-
-		for (const auto code : str)
-		{
-			seed = 31 * seed + code;
-		}
-
-		return seed;
-	}
-};
-
-template <x69::format_t native> struct std::hash<x69::txt<native>>
-{
-	constexpr auto operator()(const x69::txt<native>& str) const noexcept -> size_t
-	{
-		int seed {0};
-
-		for (const auto code : str)
-		{
-			seed = 31 * seed + code;
-		}
-
-		return seed;
-	}
-};
-
-template <x69::format_t native,
-          /*&*/template <class>
-          /*&*/typename malloc>
-inline constexpr bool std::ranges::disable_sized_range<x69::str<native,
-                                                                malloc>> = true;
-
-template <x69::format_t native>
-inline constexpr bool std::ranges::disable_sized_range<x69::txt<native>> = true;

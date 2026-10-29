@@ -2,10 +2,14 @@
 	"files.exclude":
 	{
 		".vs": true,
-		"out": true,
-		"build": true,
+		".git": true,
 		".cache": true,
-		// git submodule
-		"pkg/*/*": true,
+		"./build": true,
+		// pkg(s)
+		"./pkg/*/*/": true,
+		// IDE(s)
+		".zed/**": true,
+		// {COMPILE_COMMANDS}
+		"compile_commands.json": true,
 	},
 }

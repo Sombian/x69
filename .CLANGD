@@ -1,10 +1,25 @@
 CompileFlags:
-    Add: ["-std=c++23"]
+    Add: [-std=c++23,
+          -ferror-limit=0,
+          -fmacro-backtrace-limit=0,
+          -ftemplate-backtrace-limit=0,
+          -fconstexpr-backtrace-limit=0]
 
 InlayHints:
     Designators: Off
     DeducedTypes: Off
     ParameterNames: Off
+
+Diagnostics:
+    ClangTidy:
+        Remove: [llvm*,
+                 boost*,
+                 abseil*,
+                 google*,
+                 zircon*,
+                 altera*,
+                 android*,
+                 fuchsia*]
 
 Documentation:
     CommentFormat: Markdown

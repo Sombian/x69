@@ -3,3 +3,5 @@ out/
 
 .cache/
 .vs/
+
+compile_commands.json

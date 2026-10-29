@@ -1,0 +1,15 @@
+{
+	"file_scan_exclusions":
+	[
+		".vs",
+		".git",
+		".cache",
+		"./build",
+		// pkg(s)
+		"./pkg/*/*/",
+		// IDE(s)
+		".vscode/**",
+		// {COMPILE_COMMANDS}
+		"compile_commands.json",
+	],
+}
